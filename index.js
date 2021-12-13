@@ -1,13 +1,38 @@
 import * as THREE from 'three';
 // import Simplex from './simplex-noise.js';
 import metaversefile from 'metaversefile';
-const {useApp, useScene} = metaversefile;
+const {useApp, useLocalPlayer, useActivate, useWear, useScene} = metaversefile;
 
 const baseUrl = import.meta.url.replace(/(\/)[^\/\\]*$/, '$1');
 
 export default () => {
   const app = useApp();
   const scene = useScene();
+
+  const components = [
+    {
+      "key": "physics",
+      "value": true
+    },
+    {
+      "key": "wear",
+      "value": {
+        "boneAttachment": "spine",
+        "position": [0.4, 0.7, -0.2],
+        "quaternion": [0, 0, 0.9510565162951535, 0.30901699437494745]
+      }
+    },
+    {
+      "key": "use",
+      "value": {
+        "animation": "combo",
+        "boneAttachment": "leftHand",
+        "position": [-0.07, -0.03, 0],
+        "quaternion": [0.7071067811865475, 0, 0, 0.7071067811865476],
+        "scale": [1, 1, 1]
+      }
+    },
+  ];
 
   let subApp = null;
   (async () => {
@@ -23,10 +48,11 @@ export default () => {
     subApp.updateMatrixWorld();
     // subApp.instanceId = getNextInstanceId();
     subApp.contentId = u2;
-    subApp.setComponent('physics', true);
-    /* for (const {key, value} of components) {
+    
+    // subApp.setComponent('physics', true);
+    for (const {key, value} of components) {
       subApp.setComponent(key, value);
-    } */
+    }
     await subApp.addModule(m);
     scene.add(subApp);
 
@@ -35,6 +61,25 @@ export default () => {
 
     // app.add(subApp);
   })();
+
+  useActivate(() => {
+    const localPlayer = useLocalPlayer();
+    localPlayer.wear(app);
+  });
+
+  useWear(e => {
+    const {wear} = e;
+    // for (const subApp of subApps) {
+    console.log('wear', subApp, wear);
+    if (subApp) {
+      subApp.dispatchEvent({
+        type: 'wearupdate',
+        wear,
+      });
+    }
+    // }
+    // wearing = wear;
+  });
 
   app.getPhysicsObjects = () => {
     const result = subApp ? subApp.getPhysicsObjects() : [];
