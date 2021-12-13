@@ -18,8 +18,8 @@ export default () => {
       "key": "wear",
       "value": {
         "boneAttachment": "spine",
-        "position": [0.4, 0.7, -0.2],
-        "quaternion": [0, 0, 0.9510565162951535, 0.30901699437494745]
+        "position": [-0.3, 0.7, -0.15],
+        "quaternion": [0, 0, 0.9510565162951536, -0.30901699437494734]
       }
     },
     {
