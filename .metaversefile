@@ -1,6 +1,6 @@
 {
   "name": "silsword",
-  "start_url": "megasword_v4_texta.glb",
+  "start_url": "index.js",
   "components": [
     {
       "key": "wear",
