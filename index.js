@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 // import Simplex from './simplex-noise.js';
 import metaversefile from 'metaversefile';
-const {useApp, useLocalPlayer, useActivate, useWear, useScene} = metaversefile;
+const {useApp, useLocalPlayer, useActivate, useWear, useScene, getNextInstanceId} = metaversefile;
 
 const baseUrl = import.meta.url.replace(/(\/)[^\/\\]*$/, '$1');
 
@@ -46,9 +46,10 @@ export default () => {
     subApp.quaternion.copy(app.quaternion);
     subApp.scale.copy(app.scale);
     subApp.updateMatrixWorld();
-    // subApp.instanceId = getNextInstanceId();
     subApp.contentId = u2;
-    
+    subApp.instanceId = app.instanceId;
+    // subApp.instanceId = getNextInstanceId();
+
     // subApp.setComponent('physics', true);
     for (const {key, value} of components) {
       subApp.setComponent(key, value);
