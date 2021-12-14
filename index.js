@@ -9,10 +9,14 @@ export default () => {
   const app = useApp();
   const scene = useScene();
 
-  const components = [
+  /* const components = [
     {
       "key": "physics",
       "value": true
+    },
+    {
+      "key": "animation",
+      "value": false
     },
     {
       "key": "wear",
@@ -25,14 +29,25 @@ export default () => {
     {
       "key": "use",
       "value": {
-        "animation": "combo",
+        "animation": [
+          "swordSideSlash",
+          "swordSideSlash"
+        ],
         "boneAttachment": "leftHand",
         "position": [-0.07, -0.03, 0],
         "quaternion": [0.7071067811865475, 0, 0, 0.7071067811865476],
         "scale": [1, 1, 1]
       }
     },
-  ];
+    {
+      "key": "aim",
+      "value": {
+        "animation": "swordSide",
+      },
+    }
+  ]; */
+  // console.log('got app components', app.components);
+  const {components} = app;
 
   let subApp = null;
   (async () => {
