@@ -3,19 +3,41 @@
   "start_url": "index.js",
   "components": [
     {
+      "key": "physics",
+      "value": true
+    },
+    {
+      "key": "animation",
+      "value": false
+    },
+    {
+      "key": "aim",
+      "value": {
+        "appAnimation": "Sword_Activate",
+        "playerAnimation": "swordSideIdle",
+        "boneAttachment": "leftHand",
+        "position": [-0.055, -0.01, -0.18],
+        "quaternion": [0.7071067811865475, 0, 0, 0.7071067811865476],
+        "scale": [1, 1, 1]
+      }
+    },
+    {
       "key": "wear",
       "value": {
         "boneAttachment": "spine",
-        "position": [0.4, 0.7, -0.2],
-        "quaternion": [0, 0, 0.9510565162951535, 0.30901699437494745]
+        "position": [-0.3, 0.7, -0.15],
+        "quaternion": [0, 0, 0.9510565162951536, -0.30901699437494734]
       }
     },
     {
       "key": "use",
       "value": {
-        "animation": "combo",
+        "animation": [
+          "swordSideSlash",
+          "swordSideSlash"
+        ],
         "boneAttachment": "leftHand",
-        "position": [-0.07, -0.03, 0],
+        "position": [-0.055, -0.01, -0.18],
         "quaternion": [0.7071067811865475, 0, 0, 0.7071067811865476],
         "scale": [1, 1, 1]
       }
