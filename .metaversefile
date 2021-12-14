@@ -34,7 +34,8 @@
       "value": {
         "animation": [
           "swordSideSlash",
-          "swordSideSlash"
+          "swordTopDownSlash",
+          "swordUndraw"
         ],
         "boneAttachment": "leftHand",
         "position": [-0.055, -0.01, -0.18],
