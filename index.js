@@ -51,7 +51,7 @@ export default () => {
 
   let subApp = null;
   (async () => {
-    const u2 = baseUrl + '/megasword_v4_texta.glb';
+    const u2 = baseUrl + 'megasword_v4_texta.glb';
     const m = await metaversefile.import(u2);
 
     subApp = metaversefile.createApp({
