@@ -76,6 +76,8 @@ export default () => {
     // window.subApp = subApp;
 
     // app.add(subApp);
+
+    // window.subApp = subApp;
   })();
 
   useActivate(() => {
@@ -96,6 +98,8 @@ export default () => {
     // }
     // wearing = wear;
   });
+
+  // window.app = app;
 
   app.getPhysicsObjects = () => {
     const result = subApp ? subApp.getPhysicsObjects() : [];
