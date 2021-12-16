@@ -96,7 +96,7 @@ export default () => {
         vertexShader: trailVsh,
         fragmentShader: trailFsh,
         side: THREE.DoubleSide,
-        depthWrite: false,
+        // depthWrite: false,
         transparent: true,
       });
       
