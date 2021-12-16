@@ -51,8 +51,9 @@ export default () => {
         ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
 
         void main() {
-          float f = 1. - pow((uTime - vT)/100., 0.1);
-          vec3 p = (f >= -1.) ? position : vec3(0.);
+          // float f = 1. - pow((uTime - vT)/100., 0.1);
+          // vec3 p = (f >= -1.) ? position : vec3(0.);
+          vec3 p = position;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.);
           vT = t;
           ${THREE.ShaderChunk.logdepthbuf_vertex}
