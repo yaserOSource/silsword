@@ -16,14 +16,16 @@ export default () => {
 
   class TrailMesh extends THREE.Mesh {
     constructor(a, b) {
+      const numPositions = 256;
+
       const geometry = new THREE.BufferGeometry();
-      const positions = new Float32Array(6*3*1024);
+      const positions = new Float32Array(6*3*numPositions);
       const positionAttribute = new THREE.BufferAttribute(positions, 3);
       geometry.setAttribute('position', positionAttribute);
       const ts = new Float32Array(positions.length/3);
       const tAttribute = new THREE.BufferAttribute(ts, 1);
       geometry.setAttribute('t', tAttribute);
-      // geometry.setDrawRange(0, 0);
+      geometry.setDrawRange(0, 0);
       
       const trailVsh = `\
         ${THREE.ShaderChunk.common}
@@ -51,9 +53,9 @@ export default () => {
         ${THREE.ShaderChunk.logdepthbuf_pars_vertex}
 
         void main() {
-          // float f = 1. - pow((uTime - vT)/100., 0.1);
-          // vec3 p = (f >= -1.) ? position : vec3(0.);
-          vec3 p = position;
+          float f = 1. - pow((uTime - vT)/100., 0.1);
+          vec3 p = (f >= -1.) ? position : vec3(0.);
+          // vec3 p = position;
           gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.);
           vT = t;
           ${THREE.ShaderChunk.logdepthbuf_vertex}
@@ -102,6 +104,7 @@ export default () => {
       });
       
       super(geometry, material);
+      this.frustumCulled = false;
 
       this.a = a;
       this.b = b;
@@ -110,10 +113,23 @@ export default () => {
       this.positionIndex = 0;
       this.tIndex = 0;
       this.lastNow = -Infinity;
-      this.frustumCulled = false;
+      this.lastEnabled = false;
+      this.lastTriggerStartTime = -Infinity;
     }
     update(enabled, matrixWorld) {
-      const now = performance.now();
+      let now = performance.now();
+
+      if (enabled && !this.lastEnabled) {
+        this.lastAWorld.set(NaN, NaN, NaN);
+        this.lastBWorld.set(NaN, NaN, NaN);
+        this.positionIndex = 0;
+        this.tIndex = 0;
+        this.lastNow = -Infinity;
+        this.lastTriggerStartTime = now;
+      }
+      now -= this.lastTriggerStartTime;
+      // console.log('got now', now);
+
       if (enabled && !isNaN(this.lastAWorld.x) && !isNaN(this.lastBWorld.x)) {
         const positions = this.geometry.attributes.position.array;
         const ts = this.geometry.attributes.t.array;
@@ -166,24 +182,13 @@ export default () => {
           ts[this.tIndex++] = now;
           ts[this.tIndex++] = now;
 
-          /* this.geometry.attributes.t.updateRange = {
-            offset: startIndex/1,
-            count: (this.tIndex - startIndex)/1,
-          }; */
+          this.geometry.attributes.t.updateRange = {
+            offset: startIndex,
+            count: (this.tIndex - startIndex),
+          };
           this.geometry.attributes.t.needsUpdate = true;
 
-          /* if (isNaN(this.tIndex)) {
-            debugger;
-          } */
-          // const oldTIndex = this.tIndex;
-          // console.log('old t index', oldTIndex);
           this.tIndex = this.tIndex % this.geometry.attributes.t.array.length;
-          /* if (this.tIndex !== oldTIndex) {
-            debugger;
-          } */
-          /* if (isNaN(this.tIndex)) {
-            debugger;
-          } */
         }
       } 
 
@@ -192,6 +197,9 @@ export default () => {
       this.lastBWorld.copy(this.b)
         .applyMatrix4(matrixWorld);
       this.lastNow = now;
+      this.lastEnabled = enabled;
+
+      this.geometry.setDrawRange(0, this.positionIndex/3);
 
       this.material.uniforms.uTime.value = now;
       this.material.uniforms.uTime.needsUpdate = true;
