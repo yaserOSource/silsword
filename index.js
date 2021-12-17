@@ -214,7 +214,7 @@ export default () => {
     const b = new THREE.Vector3().fromArray(trail[1]);
     trailMesh = new TrailMesh(a, b);
     sceneLowPriority.add(trailMesh);
-    window.trailMesh = trailMesh;
+    // window.trailMesh = trailMesh;
   }
 
   let subApp = null;
