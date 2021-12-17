@@ -17,7 +17,7 @@ export default () => {
 
   const {components} = app;
 
-  const swordLength = 1;
+  const swordLength = 1.4; // same as tail
   const maxNumDecals = 128;
   // const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
   const size = 0.04;
