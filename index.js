@@ -1,19 +1,210 @@
 import * as THREE from 'three';
 // import Simplex from './simplex-noise.js';
 import metaversefile from 'metaversefile';
-const {useApp, useFrame, useScene, useInternals, useLocalPlayer, useActivate, useUse, useWear, useCleanup} = metaversefile;
+const {useApp, useFrame, useScene, useInternals, useLocalPlayer, useActivate, useUse, useWear, usePhysics, getAppByPhysicsId, useCleanup} = metaversefile;
 
 const baseUrl = import.meta.url.replace(/(\/)[^\/\\]*$/, '$1');
 
 const localVector = new THREE.Vector3();
+const localVector2 = new THREE.Vector3();
+const localQuaternion = new THREE.Quaternion();
 
 export default () => {
   const app = useApp();
   const scene = useScene();
   const {sceneLowPriority} = useInternals();
+  const physics = usePhysics();
 
   const {components} = app;
 
+  const swordLength = 1;
+  const maxNumDecals = 128;
+  // const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
+  const size = 0.04;
+  const decalGeometry = new THREE.BoxBufferGeometry(size, size, size).toNonIndexed();
+  const decalMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xFF0000,
+  });
+  const _makeDecalMesh = () => {
+    const geometry = new THREE.BufferGeometry();
+    const positions = new Float32Array(decalGeometry.attributes.position.array.length * maxNumDecals);
+    const positionsAttribute = new THREE.BufferAttribute(positions, 3);
+    geometry.setAttribute('position', positionsAttribute);
+    const normals = new Float32Array(decalGeometry.attributes.normal.array.length * maxNumDecals);
+    const normalsAttribute = new THREE.BufferAttribute(normals, 3);
+    geometry.setAttribute('normal', normalsAttribute);
+    const uvs = new Float32Array(decalGeometry.attributes.uv.array.length * maxNumDecals);
+    const uvsAttribute = new THREE.BufferAttribute(uvs, 2);
+    geometry.setAttribute('uv', uvsAttribute);
+    // const indices = new Uint16Array(decalGeometry.index.array.length * maxNumDecals);
+    // const indicesAttribute = new THREE.BufferAttribute(indices, 1);
+    // geometry.setIndex(indicesAttribute);
+
+    const decalMesh = new THREE.Mesh(geometry, decalMaterial);
+    decalMesh.name = 'DecalMesh';
+    decalMesh.frustumCulled = false;
+    decalMesh.offset = 0;
+    decalMesh.update = (using, matrixWorld) => {
+      if (!using) {
+        return;
+      }
+
+      matrixWorld.decompose(localVector, localQuaternion, localVector2);
+      localQuaternion.multiply(
+        new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI*0.5)
+      );
+
+      const result = physics.raycast(localVector, localQuaternion);
+      if (result) {
+        const targetApp = getAppByPhysicsId(result.objectId);
+
+        const newPointVec = new THREE.Vector3().fromArray(result.point);
+        if (newPointVec.distanceTo(localVector) <= swordLength) {
+          const normal = new THREE.Vector3().fromArray(result.normal);
+          const modiPoint = newPointVec.clone().add(normal.clone().multiplyScalar(0.01));
+
+          const leftPoint = modiPoint.clone().add(new THREE.Vector3(-0.1, 0, 0).applyQuaternion(localQuaternion));
+          const rightPoint = modiPoint.clone().add(new THREE.Vector3(0.1, 0, 0).applyQuaternion(localQuaternion));
+          const width = leftPoint.distanceTo(rightPoint);
+
+          const localDecalGeometry = decalGeometry.clone()
+            .applyMatrix4(new THREE.Matrix4().makeScale(width/size, 1, 1))
+            .applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(localQuaternion))
+            .applyMatrix4(new THREE.Matrix4().makeTranslation(modiPoint.x, modiPoint.y, modiPoint.z));
+          decalMesh.mergeGeometry(localDecalGeometry);
+        }
+        
+        /* const pos = modiPoint;
+        const q = new THREE.Quaternion().setFromRotationMatrix( new THREE.Matrix4().lookAt(
+          pos,
+          pos.clone().sub(normal),
+          upVector
+        ));
+        const s = new THREE.Vector3(1, 1, 1);
+        const planeMatrix = new THREE.Matrix4().compose(
+          pos,
+          q,
+          s
+        );
+        const planeMatrixInverse = planeMatrix.clone().invert();
+
+        const localDecalGeometry = decalGeometry.clone();
+        const positions = localDecalGeometry.attributes.position.array;
+        for (let i = 0; i < positions.length; i++) {
+          const p = new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
+          const pToWorld = p.clone().applyMatrix4(planeMatrix);
+          const vertexRaycast = physics.raycast(pToWorld, q.clone());
+
+          if (vertexRaycast) {
+            const vertextHitnormal = new THREE.Vector3().fromArray(vertexRaycast.normal);
+
+            const pointVec = new THREE.Vector3()
+              .fromArray(vertexRaycast.point)
+              .add(
+                vertextHitnormal.clone().multiplyScalar(0.01)
+              );
+            pointVec.applyMatrix4(planeMatrixInverse);
+            const minClamp = -0.25;
+            const maxClamp = 0.25;
+            pointVec.sub(p);
+            // pointVec.x = clamp(pointVec.x, minClamp, maxClamp);
+            // pointVec.y = clamp(pointVec.y, minClamp, maxClamp);
+            pointVec.z = clamp(pointVec.z, minClamp, maxClamp);
+            pointVec.add(p);
+            pointVec.applyMatrix4(planeMatrix);
+            // const clampedPos = new Vector3(clamp(worldToLoc.x, minClamp, maxClamp), 
+            // clamp(worldToLoc.y, minClamp, maxClamp), clamp(worldToLoc.z, minClamp, maxClamp));
+
+            if (debugDecalVertPos) {
+              const debugMesh = new THREE.Mesh(debugGeo, debugMat);
+              debugMesh.position.set(pointVec.x, pointVec.y, pointVec.z);
+              debugMesh.updateWorldMatrix();
+              scene.add(debugMesh);
+            }
+
+            // dummyPosition.position.set(pointVec.x, pointVec.y, pointVec.z);
+            // dummyPosition.updateWorldMatrix();
+            // const worldToLoc = pointVec.clone().applyMatrix4(planeMatrixInverse);
+            
+            pointVec.toArray(positions, i * 3);
+            // decalGeometry.attributes.position.setXYZ( i, clampedPos.x, clampedPos.y, clampedPos.z );
+          }  else {
+            pToWorld.toArray(positions, i * 3);
+          }
+        }
+
+        localDecalGeometry.computeVertexNormals();
+
+        explosionApp.position.fromArray(result.point);
+        explosionApp.quaternion.setFromRotationMatrix(
+          new THREE.Matrix4().lookAt(
+            explosionApp.position,
+            explosionApp.position.clone()
+              .sub(normal),
+            upVector
+          )
+        );
+        // explosionApp.scale.copy(gunApp.scale);
+        explosionApp.updateMatrixWorld();
+        explosionApp.setComponent('color1', 0xef5350);
+        explosionApp.setComponent('color2', 0x000000);
+        explosionApp.setComponent('gravity', -0.5);
+        explosionApp.setComponent('rate', 0.5);
+        explosionApp.use();
+        
+        bulletPointLight.position.copy(explosionApp.position);
+        bulletPointLight.startTime = performance.now();
+        bulletPointLight.endTime = bulletPointLight.startTime + bulletSparkTime;
+      
+        if (targetApp) {
+          const damage = 2;
+          targetApp.hit(damage, {
+            collisionId: targetApp.willDieFrom(damage) ? result.objectId : null,
+          });
+        } else {
+          console.warn('no app with physics id', result.objectId);
+        } */
+      }
+    };
+    decalMesh.mergeGeometry = localDecalGeometry => {
+      const offset = decalMesh.offset;
+      // console.log('offset', decalMesh.offset);
+      for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
+        decalMesh.geometry.attributes.position.setXYZ( i + offset, localDecalGeometry.attributes.position.getX(i), localDecalGeometry.attributes.position.getY(i), localDecalGeometry.attributes.position.getZ(i) );
+        decalMesh.geometry.attributes.uv.setXY( i + offset, localDecalGeometry.attributes.uv.getX(i), localDecalGeometry.attributes.uv.getY(i) );
+        decalMesh.geometry.attributes.normal.setXYZ( i + offset, localDecalGeometry.attributes.normal.getX(i), localDecalGeometry.attributes.normal.getY(i), localDecalGeometry.attributes.normal.getZ(i) );
+        // decalMesh.geometry.index.setX( i + offset, localDecalGeometry.index.getX(i) );
+      }
+      // flag geometry attributes for update
+      decalMesh.geometry.attributes.position.updateRange = {
+        offset: offset*3,
+        count: localDecalGeometry.attributes.position.array.length,
+      };
+      decalMesh.geometry.attributes.position.needsUpdate = true;
+      decalMesh.geometry.attributes.uv.updateRange = {
+        offset: offset*2,
+        count: localDecalGeometry.attributes.uv.array.length,
+      };
+      decalMesh.geometry.attributes.uv.needsUpdate = true;
+      decalMesh.geometry.attributes.normal.updateRange = {
+        offset: offset*3,
+        count: localDecalGeometry.attributes.normal.array.length,
+      };
+      decalMesh.geometry.attributes.normal.needsUpdate = true;
+      // decalMesh.geometry.index.updateRange = {
+      //   offset,
+      //   count: localDecalGeometry.index.count,
+      // };
+      //decalMesh.geometry.index.needsUpdate = true;
+      // update geometry attribute offset
+      decalMesh.offset += localDecalGeometry.attributes.position.count;
+      decalMesh.offset = decalMesh.offset % decalMesh.geometry.attributes.position.count;
+    };
+
+    return decalMesh;
+  };
+  const decalMesh = _makeDecalMesh();
+  scene.add(decalMesh);
   class TrailMesh extends THREE.Mesh {
     constructor(a, b) {
       const numPositions = 256;
@@ -265,10 +456,14 @@ export default () => {
     if (trailMesh && subApp) {
       trailMesh.update(using, subApp.matrixWorld);
     }
+    if (decalMesh && subApp) {
+      decalMesh.update(using, subApp.matrixWorld);
+    }
   });
 
   useCleanup(() => {
     trailMesh && sceneLowPriority.remove(trailMesh);
+    decalMesh && scene.remove(decalMesh);
   });
 
   app.getPhysicsObjects = () => {
