@@ -20,6 +20,9 @@ export default () => {
   const swordLength = 1.4; // same as tail
   const maxNumDecals = 128;
   // const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
+  const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1)
+    .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
+    .toNonIndexed();
   const size = 0.04;
   const decalGeometry = new THREE.BoxBufferGeometry(size, size, size).toNonIndexed();
   const decalMaterial = new THREE.MeshPhysicalMaterial({
@@ -61,16 +64,40 @@ export default () => {
         const newPointVec = new THREE.Vector3().fromArray(result.point);
         if (newPointVec.distanceTo(localVector) <= swordLength) {
           const normal = new THREE.Vector3().fromArray(result.normal);
-          const modiPoint = newPointVec.clone().add(normal.clone().multiplyScalar(0.01));
 
-          const leftPoint = modiPoint.clone().add(new THREE.Vector3(-0.1, 0, 0).applyQuaternion(localQuaternion));
-          const rightPoint = modiPoint.clone().add(new THREE.Vector3(0.1, 0, 0).applyQuaternion(localQuaternion));
+          const normalScaled = normal.clone().multiplyScalar(0.01);
+          const centerPoint = newPointVec//.clone()
+            .add(normalScaled);
+
+          const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, newPointVec);
+          const leftPoint = plane.projectPoint(
+            newPointVec.clone().add(new THREE.Vector3(-0.1, 0, 0).applyQuaternion(localQuaternion)),
+            new THREE.Vector3()
+          ).add(normalScaled);
+          const rightPoint = plane.projectPoint(
+            newPointVec.clone().add(new THREE.Vector3(0.1, 0, 0).applyQuaternion(localQuaternion)),
+            new THREE.Vector3()
+          ).add(normalScaled);
+
+          // const leftPoint = modiPoint.clone().add(new THREE.Vector3(-0.1, 0, 0).applyQuaternion(localQuaternion));
+          // const rightPoint = modiPoint.clone().add(new THREE.Vector3(0.1, 0, 0).applyQuaternion(localQuaternion));
           const width = leftPoint.distanceTo(rightPoint);
 
-          const localDecalGeometry = decalGeometry.clone()
-            .applyMatrix4(new THREE.Matrix4().makeScale(width/size, 1, 1))
-            .applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(localQuaternion))
-            .applyMatrix4(new THREE.Matrix4().makeTranslation(modiPoint.x, modiPoint.y, modiPoint.z));
+          const localDecalGeometry = planeGeometry.clone()
+            .applyMatrix4(new THREE.Matrix4().makeScale(width, 1, 1))
+            .applyMatrix4(
+              new THREE.Matrix4().lookAt(
+                centerPoint,
+                centerPoint.clone()
+                  .add(
+                    normal.clone()
+                      .cross(new THREE.Vector3(1, 0, 0).applyQuaternion(localQuaternion))
+                  ),
+                normal
+              )
+            )
+            // .applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(localQuaternion))
+            .applyMatrix4(new THREE.Matrix4().makeTranslation(centerPoint.x, centerPoint.y, centerPoint.z));
           decalMesh.mergeGeometry(localDecalGeometry);
         }
         
