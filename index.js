@@ -62,25 +62,61 @@ export default () => {
 
       const result = physics.raycast(localVector, localQuaternion);
       if (result) {
-        const targetApp = getAppByPhysicsId(result.objectId);
+        // const targetApp = getAppByPhysicsId(result.objectId);
 
         const newPointVec = new THREE.Vector3().fromArray(result.point);
         if (newPointVec.distanceTo(localVector) <= swordLength) {
           const normal = new THREE.Vector3().fromArray(result.normal);
 
           const normalScaled = normal.clone().multiplyScalar(0.01);
-          const centerPoint = newPointVec//.clone()
-            .add(normalScaled);
+          const centerPoint = newPointVec.clone().add(normalScaled);
 
-          const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, newPointVec);
-          const leftPoint = plane.projectPoint(
+          const normalQuaternion = new THREE.Quaternion().setFromUnitVectors(
+            new THREE.Vector3(0, 0, 1),
+            normal
+          );
+
+          // const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, newPointVec);
+          const leftPoint = centerPoint.clone()
+            .add(
+              new THREE.Vector3(-0.1, 0, 0)
+                .applyQuaternion(localQuaternion)
+            );
+          const leftResult = physics.raycast(
+            leftPoint,
+            normalQuaternion
+          );
+          if (leftResult) {
+            const leftPointVec = new THREE.Vector3().fromArray(leftResult.point);
+            if (leftPointVec.distanceTo(localVector) <= swordLength) {
+              leftPoint.copy(leftPointVec);
+            }
+          }
+
+          const rightPoint = centerPoint.clone()
+            .add(
+              new THREE.Vector3(0.1, 0, 0)
+                .applyQuaternion(localQuaternion)
+            );
+          const rightResult = physics.raycast(
+            rightPoint,
+            normalQuaternion
+          );
+          if (rightResult) {
+            const rightPointVec = new THREE.Vector3().fromArray(rightResult.point);
+            if (rightPointVec.distanceTo(localVector) <= swordLength) {
+              rightPoint.copy(rightPointVec);
+            }
+          }
+
+          /* const leftPoint = plane.projectPoint(
             newPointVec.clone().add(new THREE.Vector3(-0.1, 0, 0).applyQuaternion(localQuaternion)),
             new THREE.Vector3()
           ).add(normalScaled);
           const rightPoint = plane.projectPoint(
             newPointVec.clone().add(new THREE.Vector3(0.1, 0, 0).applyQuaternion(localQuaternion)),
             new THREE.Vector3()
-          ).add(normalScaled);
+          ).add(normalScaled); */
 
           // const leftPoint = modiPoint.clone().add(new THREE.Vector3(-0.1, 0, 0).applyQuaternion(localQuaternion));
           // const rightPoint = modiPoint.clone().add(new THREE.Vector3(0.1, 0, 0).applyQuaternion(localQuaternion));
