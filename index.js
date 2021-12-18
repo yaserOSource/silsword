@@ -25,8 +25,10 @@ export default () => {
     .toNonIndexed();
   const size = 0.04;
   const decalGeometry = new THREE.BoxBufferGeometry(size, size, size).toNonIndexed();
+  const texture = new THREE.TextureLoader().load(baseUrl + 'chevron2.svg');
   const decalMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xFF0000,
+    map: texture,
   });
   const _makeDecalMesh = () => {
     const geometry = new THREE.BufferGeometry();
