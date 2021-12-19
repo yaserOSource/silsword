@@ -22,7 +22,7 @@ export default () => {
   const maxNumDecals = 128;
   const normalScale = 0.03;
   // const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
-  const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, 32)
+  const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, 128)
     // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
     .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
     .toNonIndexed();
@@ -155,23 +155,26 @@ export default () => {
           // console.log('log', width, thickness);
 
           const localDecalGeometry = planeGeometry.clone()
-            .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, width))
-            .applyMatrix4(rotationMatrix)
+            .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, width));
+          
+          if (!lastPoint) {
+            localDecalGeometry
+              .applyMatrix4(rotationMatrix);
+          } else {
+            localDecalGeometry
+              .applyMatrix4(
+                new THREE.Matrix4().lookAt(
+                  lastPoint.centerPoint,
+                  centerPoint,
+                  normal
+                )
+              )
+          }
+          localDecalGeometry
             .applyMatrix4(new THREE.Matrix4().makeTranslation(centerPoint.x, centerPoint.y, centerPoint.z));
 
           // if there was a previous point copy the last point's forward points to the next point's backward points
           if (lastPoint) {
-            /* const lastForwardLeftPoint = lastPoint.centerPoint.clone()
-              .add(
-                new THREE.Vector3(-lastPoint.thickness, 0, -lastPoint.width*0.5)
-                  .applyMatrix4(lastPoint.rotationMatrix)
-              );
-            const lastForwardRightPoint = lastPoint.centerPoint.clone()
-              .add(
-                new THREE.Vector3(lastPoint.thickness, 0, -lastPoint.width*0.5)
-                  .applyMatrix4(lastPoint.rotationMatrix)
-              ); */
-
             for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
               localVector.fromArray(planeGeometry.attributes.position.array, i*3);
               if (localVector.z > 0) { // if this is a backward point
