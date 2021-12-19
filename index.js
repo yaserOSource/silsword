@@ -50,32 +50,47 @@ export default () => {
     decalMesh.name = 'DecalMesh';
     decalMesh.frustumCulled = false;
     decalMesh.offset = 0;
+    let lastPoint = null;
     decalMesh.update = (using, matrixWorld) => {
       if (!using) {
         return;
       }
 
-      matrixWorld.decompose(localVector, localQuaternion, localVector2);
-      localQuaternion.multiply(
-        new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI*0.5)
-      );
+      const _getNextPoint = () => {
+        matrixWorld.decompose(localVector, localQuaternion, localVector2);
+        localQuaternion.multiply(
+          new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI*0.5)
+        );
 
-      const result = physics.raycast(localVector, localQuaternion);
-      if (result) {
-        // const targetApp = getAppByPhysicsId(result.objectId);
+        const result = physics.raycast(localVector, localQuaternion);
+        if (result) {
+          const point = new THREE.Vector3().fromArray(result.point);
+          if (point.distanceTo(localVector) <= swordLength) {
+            const normal = new THREE.Vector3().fromArray(result.normal);
 
-        const newPointVec = new THREE.Vector3().fromArray(result.point);
-        if (newPointVec.distanceTo(localVector) <= swordLength) {
-          const normal = new THREE.Vector3().fromArray(result.normal);
-
+            return {
+              point,
+              normal,
+            };
+          } else {
+            return null;
+          }
+        } else {
+          return null;
+        }
+      };
+      const _drawPoints = (lastPoint, nextPoint) => {
+        if (nextPoint) {
+          const {point, normal} = nextPoint;
+  
           const normalScaled = normal.clone().multiplyScalar(0.01);
-          const centerPoint = newPointVec.clone().add(normalScaled);
-
+          const centerPoint = point.clone().add(normalScaled);
+  
           const normalQuaternion = new THREE.Quaternion().setFromUnitVectors(
             new THREE.Vector3(0, 0, 1),
             normal
           );
-
+  
           const leftPoint = centerPoint.clone()
             .add(
               new THREE.Vector3(-0.1, 0, 0)
@@ -91,7 +106,7 @@ export default () => {
               leftPoint.copy(leftPointVec);
             }
           }
-
+  
           const rightPoint = centerPoint.clone()
             .add(
               new THREE.Vector3(0.1, 0, 0)
@@ -107,11 +122,14 @@ export default () => {
               rightPoint.copy(rightPointVec);
             }
           }
-
+  
           const width = leftPoint.distanceTo(rightPoint);
+          const thickness = 0.05;
+
+          console.log('log', width, thickness);
 
           const localDecalGeometry = planeGeometry.clone()
-            .applyMatrix4(new THREE.Matrix4().makeScale(width, 1, 1))
+            .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, width))
             .applyMatrix4(
               new THREE.Matrix4().lookAt(
                 centerPoint,
@@ -125,100 +143,32 @@ export default () => {
             )
             // .applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(localQuaternion))
             .applyMatrix4(new THREE.Matrix4().makeTranslation(centerPoint.x, centerPoint.y, centerPoint.z));
+
+          // if there was a previous point copy the last point's forward points to the next point's backward points
+          if (lastPoint) {
+            const copySpec = [
+              {srcIndex: 0, dstIndices: [1, 3]},
+              {srcIndex: 2, dstIndices: [4]},
+            ];
+            for (const {srcIndex, dstIndices} of copySpec) {
+              for (const dstIndex of dstIndices) {
+                // copy over the forward points
+                let lastOffset = decalMesh.offset - localDecalGeometry.attributes.position.count;
+                if (lastOffset <= 0) {
+                  lastOffset += decalGeometry.attributes.position.count;
+                }
+                localVector.fromArray(decalGeometry.attributes.position.array, lastOffset + srcIndex * 3)
+                  .toArray(localDecalGeometry.attributes.position.array, dstIndex * 3);
+              }
+            }
+          }
+
           decalMesh.mergeGeometry(localDecalGeometry);
         }
-        
-        /* const pos = modiPoint;
-        const q = new THREE.Quaternion().setFromRotationMatrix( new THREE.Matrix4().lookAt(
-          pos,
-          pos.clone().sub(normal),
-          upVector
-        ));
-        const s = new THREE.Vector3(1, 1, 1);
-        const planeMatrix = new THREE.Matrix4().compose(
-          pos,
-          q,
-          s
-        );
-        const planeMatrixInverse = planeMatrix.clone().invert();
-
-        const localDecalGeometry = decalGeometry.clone();
-        const positions = localDecalGeometry.attributes.position.array;
-        for (let i = 0; i < positions.length; i++) {
-          const p = new THREE.Vector3(positions[i * 3], positions[i * 3 + 1], positions[i * 3 + 2]);
-          const pToWorld = p.clone().applyMatrix4(planeMatrix);
-          const vertexRaycast = physics.raycast(pToWorld, q.clone());
-
-          if (vertexRaycast) {
-            const vertextHitnormal = new THREE.Vector3().fromArray(vertexRaycast.normal);
-
-            const pointVec = new THREE.Vector3()
-              .fromArray(vertexRaycast.point)
-              .add(
-                vertextHitnormal.clone().multiplyScalar(0.01)
-              );
-            pointVec.applyMatrix4(planeMatrixInverse);
-            const minClamp = -0.25;
-            const maxClamp = 0.25;
-            pointVec.sub(p);
-            // pointVec.x = clamp(pointVec.x, minClamp, maxClamp);
-            // pointVec.y = clamp(pointVec.y, minClamp, maxClamp);
-            pointVec.z = clamp(pointVec.z, minClamp, maxClamp);
-            pointVec.add(p);
-            pointVec.applyMatrix4(planeMatrix);
-            // const clampedPos = new Vector3(clamp(worldToLoc.x, minClamp, maxClamp), 
-            // clamp(worldToLoc.y, minClamp, maxClamp), clamp(worldToLoc.z, minClamp, maxClamp));
-
-            if (debugDecalVertPos) {
-              const debugMesh = new THREE.Mesh(debugGeo, debugMat);
-              debugMesh.position.set(pointVec.x, pointVec.y, pointVec.z);
-              debugMesh.updateWorldMatrix();
-              scene.add(debugMesh);
-            }
-
-            // dummyPosition.position.set(pointVec.x, pointVec.y, pointVec.z);
-            // dummyPosition.updateWorldMatrix();
-            // const worldToLoc = pointVec.clone().applyMatrix4(planeMatrixInverse);
-            
-            pointVec.toArray(positions, i * 3);
-            // decalGeometry.attributes.position.setXYZ( i, clampedPos.x, clampedPos.y, clampedPos.z );
-          }  else {
-            pToWorld.toArray(positions, i * 3);
-          }
-        }
-
-        localDecalGeometry.computeVertexNormals();
-
-        explosionApp.position.fromArray(result.point);
-        explosionApp.quaternion.setFromRotationMatrix(
-          new THREE.Matrix4().lookAt(
-            explosionApp.position,
-            explosionApp.position.clone()
-              .sub(normal),
-            upVector
-          )
-        );
-        // explosionApp.scale.copy(gunApp.scale);
-        explosionApp.updateMatrixWorld();
-        explosionApp.setComponent('color1', 0xef5350);
-        explosionApp.setComponent('color2', 0x000000);
-        explosionApp.setComponent('gravity', -0.5);
-        explosionApp.setComponent('rate', 0.5);
-        explosionApp.use();
-        
-        bulletPointLight.position.copy(explosionApp.position);
-        bulletPointLight.startTime = performance.now();
-        bulletPointLight.endTime = bulletPointLight.startTime + bulletSparkTime;
-      
-        if (targetApp) {
-          const damage = 2;
-          targetApp.hit(damage, {
-            collisionId: targetApp.willDieFrom(damage) ? result.objectId : null,
-          });
-        } else {
-          console.warn('no app with physics id', result.objectId);
-        } */
-      }
+      };
+      const nextPoint = _getNextPoint();
+      _drawPoints(lastPoint, nextPoint);
+      lastPoint = nextPoint;
     };
     decalMesh.mergeGeometry = localDecalGeometry => {
       const offset = decalMesh.offset;
