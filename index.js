@@ -118,11 +118,7 @@ export default () => {
 
             const rotationMatrix = new THREE.Matrix4().lookAt(
               centerPoint,
-              centerPoint.clone()
-                .add(
-                  normal.clone()
-                    .cross(new THREE.Vector3(0, 1, 0).applyQuaternion(localQuaternion))
-                ),
+              centerPoint.clone().add(forwardPoint),
               normal
             );
     
