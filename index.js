@@ -123,7 +123,7 @@ export default () => {
           const width = leftPoint.distanceTo(rightPoint);
 
           const localDecalGeometry = planeGeometry.clone()
-            .applyMatrix4(new THREE.Matrix4().makeScale(width, 1, 1))
+            .applyMatrix4(new THREE.Matrix4().makeScale(1, 1, width))
             .applyMatrix4(
               new THREE.Matrix4().lookAt(
                 centerPoint,
