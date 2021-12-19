@@ -18,11 +18,12 @@ export default () => {
 
   const {components} = app;
 
-  const swordLength = 1.4; // same as tail spec
+  const swordLength = 1.6;
   const maxNumDecals = 128;
   const normalScale = 0.03;
   // const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
-  const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, 128)
+  const numSegments = 128;
+  const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, numSegments)
     // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
     .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
     .toNonIndexed();
@@ -177,7 +178,7 @@ export default () => {
           if (lastPoint) {
             for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
               localVector.fromArray(planeGeometry.attributes.position.array, i*3);
-              if (localVector.z > 0) { // if this is a backward point
+              if (localVector.z >= 0.5) { // if this is a backward point
                 const isLeft = localVector.x < 0;
                 (isLeft ? lastPoint.forwardLeftPoint : lastPoint.forwardRightPoint)
                 // localVector.fromArray(decalGeometry.attributes.position.array, lastOffset + srcIndex * 3)
