@@ -157,7 +157,6 @@ export default () => {
           const localDecalGeometry = planeGeometry.clone()
             .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, width))
             .applyMatrix4(rotationMatrix)
-            // .applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(quaternion))
             .applyMatrix4(new THREE.Matrix4().makeTranslation(centerPoint.x, centerPoint.y, centerPoint.z));
 
           // if there was a previous point copy the last point's forward points to the next point's backward points
