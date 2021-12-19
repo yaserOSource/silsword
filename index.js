@@ -197,7 +197,7 @@ export default () => {
                 localVector3.fromArray(result.point);
                 if (localVector.distanceTo(localVector3) < swordLength) {
                   localVector3
-                    .add(normalScaled)
+                    .add(normalScaled) // XXX use the correct normal in the last point case
                     .toArray(localDecalGeometry.attributes.position.array, i*3);
                 }
               }
