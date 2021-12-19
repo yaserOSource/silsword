@@ -84,35 +84,35 @@ export default () => {
               normal
             );
     
-            const leftPoint = centerPoint.clone()
+            const forwardPoint = centerPoint.clone()
               .add(
                 new THREE.Vector3(-0.1, 0, 0)
                   .applyQuaternion(localQuaternion)
               );
-            const leftResult = physics.raycast(
-              leftPoint,
+            const forwardResult = physics.raycast(
+              forwardPoint,
               normalDownQuaternion
             );
-            if (leftResult) {
-              const leftPointVec = new THREE.Vector3().fromArray(leftResult.point);
-              if (leftPointVec.distanceTo(localVector) <= swordLength) {
-                leftPoint.copy(leftPointVec);
+            if (forwardResult) {
+              const forwardPointVec = new THREE.Vector3().fromArray(forwardResult.point);
+              if (forwardPointVec.distanceTo(localVector) <= swordLength) {
+                forwardPoint.copy(forwardPointVec);
               }
             }
     
-            const rightPoint = centerPoint.clone()
+            const backwardPoint = centerPoint.clone()
               .add(
                 new THREE.Vector3(0.1, 0, 0)
                   .applyQuaternion(localQuaternion)
               );
-            const rightResult = physics.raycast(
-              rightPoint,
+            const backwardResult = physics.raycast(
+              backwardPoint,
               normalDownQuaternion
             );
-            if (rightResult) {
-              const rightPointVec = new THREE.Vector3().fromArray(rightResult.point);
-              if (rightPointVec.distanceTo(localVector) <= swordLength) {
-                rightPoint.copy(rightPointVec);
+            if (backwardResult) {
+              const backwardPointVec = new THREE.Vector3().fromArray(backwardResult.point);
+              if (backwardPointVec.distanceTo(localVector) <= swordLength) {
+                backwardPoint.copy(backwardPointVec);
               }
             }
 
@@ -126,7 +126,7 @@ export default () => {
               normal
             );
     
-            const width = leftPoint.distanceTo(rightPoint);
+            const width = forwardPoint.distanceTo(backwardPoint);
             const thickness = 0.05;
 
             return {
