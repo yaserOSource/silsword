@@ -25,6 +25,7 @@ export default () => {
   const numSegments = 128;
   const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, numSegments)
     // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
+    .applyMatrix4(new THREE.Matrix4().makeTranslation(0, -0.5, 0))
     .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
     .toNonIndexed();
   // const size = 0.04;
@@ -128,6 +129,7 @@ export default () => {
             return {
               // hitPoint,
               centerPoint,
+              forwardPoint,
               // quaternion: localQuaternion.clone(),
               rotationMatrix,
               normal,
@@ -147,34 +149,36 @@ export default () => {
       };
       const _drawPoints = (lastPoint, nextPoint) => {
         if (nextPoint) {
-          const {centerPoint, rotationMatrix, normal, normalScaled, normalDownQuaternion, width, thickness} = nextPoint;
+          const {centerPoint, forwardPoint, rotationMatrix, normal, normalScaled, normalDownQuaternion, width, thickness} = nextPoint;
 
           // console.log('log', width, thickness);
 
-          const localDecalGeometry = planeGeometry.clone()
-            .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, width));
+          const localDecalGeometry = planeGeometry.clone();
           
           if (!lastPoint) {
             localDecalGeometry
+              .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, width))
               .applyMatrix4(rotationMatrix);
           } else {
+            const distance = forwardPoint.distanceTo(lastPoint.forwardPoint);
             localDecalGeometry
+              .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, distance))
               .applyMatrix4(
                 new THREE.Matrix4().lookAt(
-                  lastPoint.centerPoint,
-                  centerPoint,
+                  lastPoint.forwardPoint,
+                  forwardPoint,
                   normal
                 )
               )
           }
           localDecalGeometry
-            .applyMatrix4(new THREE.Matrix4().makeTranslation(centerPoint.x, centerPoint.y, centerPoint.z));
+            .applyMatrix4(new THREE.Matrix4().makeTranslation(forwardPoint.x, forwardPoint.y, forwardPoint.z));
 
-          // if there was a previous point copy the last point's forward points to the next point's backward points
+          // if there was a previous point, copy the last point's forward points to the next point's backward points
           if (lastPoint) {
             for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
               localVector.fromArray(planeGeometry.attributes.position.array, i*3);
-              if (localVector.z >= 0.5) { // if this is a backward point
+              if (localVector.z >= 1) { // if this is a backward point
                 const isLeft = localVector.x < 0;
                 (isLeft ? lastPoint.forwardLeftPoint : lastPoint.forwardRightPoint)
                 // localVector.fromArray(decalGeometry.attributes.position.array, lastOffset + srcIndex * 3)
@@ -185,18 +189,20 @@ export default () => {
 
           // make the local decal geometry conform to the object mesh by raycasting from the decal mesh points down the normal
           for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
-            localVector.fromArray(localDecalGeometry.attributes.position.array, i*3);
-            const result = physics.raycast(localVector, normalDownQuaternion);
-            if (result) {
-              localVector3.fromArray(result.point);
-              if (localVector.distanceTo(localVector3) < swordLength) {
-                localVector3
-                  .add(normalScaled)
-                  .toArray(localDecalGeometry.attributes.position.array, i*3);
+            localVector.fromArray(planeGeometry.attributes.position.array, i*3);
+            if (localVector.z < 1) { // if this is not a backward point
+              localVector.fromArray(localDecalGeometry.attributes.position.array, i*3);
+              const result = physics.raycast(localVector, normalDownQuaternion); // XXX use the correct quaternion in the last point case
+              if (result) {
+                localVector3.fromArray(result.point);
+                if (localVector.distanceTo(localVector3) < swordLength) {
+                  localVector3
+                    .add(normalScaled)
+                    .toArray(localDecalGeometry.attributes.position.array, i*3);
+                }
               }
             }
           }
-
 
           nextPoint.forwardLeftPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 0*3);
           nextPoint.forwardRightPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 2*3);
