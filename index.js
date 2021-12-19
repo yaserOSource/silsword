@@ -21,7 +21,7 @@ export default () => {
   const maxNumDecals = 128;
   // const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
   const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1)
-    .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
+    // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
     .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
     .toNonIndexed();
   const size = 0.04;
@@ -130,7 +130,7 @@ export default () => {
                 centerPoint.clone()
                   .add(
                     normal.clone()
-                      .cross(new THREE.Vector3(1, 0, 0).applyQuaternion(localQuaternion))
+                      .cross(new THREE.Vector3(0, 1, 0).applyQuaternion(localQuaternion))
                   ),
                 normal
               )
