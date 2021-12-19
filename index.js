@@ -17,8 +17,9 @@ export default () => {
 
   const {components} = app;
 
-  const swordLength = 1.4; // same as tail
+  const swordLength = 1.4; // same as tail spec
   const maxNumDecals = 128;
+  const normalScale = 0.02;
   // const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
   const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1)
     // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
@@ -53,6 +54,7 @@ export default () => {
     let lastPoint = null;
     decalMesh.update = (using, matrixWorld) => {
       if (!using) {
+        lastPoint = null;
         return;
       }
 
@@ -68,7 +70,7 @@ export default () => {
           if (hitPoint.distanceTo(localVector) <= swordLength) {
             const normal = new THREE.Vector3().fromArray(result.normal);
 
-            const normalScaled = normal.clone().multiplyScalar(0.01);
+            const normalScaled = normal.clone().multiplyScalar(normalScale);
             const centerPoint = hitPoint.clone().add(normalScaled);
     
             const normalQuaternion = new THREE.Quaternion().setFromUnitVectors(
@@ -107,6 +109,16 @@ export default () => {
                 rightPoint.copy(rightPointVec);
               }
             }
+
+            const rotationMatrix = new THREE.Matrix4().lookAt(
+              centerPoint,
+              centerPoint.clone()
+                .add(
+                  normal.clone()
+                    .cross(new THREE.Vector3(0, 1, 0).applyQuaternion(localQuaternion))
+                ),
+              normal
+            );
     
             const width = leftPoint.distanceTo(rightPoint);
             const thickness = 0.05;
@@ -114,8 +126,9 @@ export default () => {
             return {
               // hitPoint,
               centerPoint,
-              quaternion: localQuaternion.clone(),
-              normal,
+              // quaternion: localQuaternion.clone(),
+              rotationMatrix,
+              // normal,
               width,
               thickness,
             };
@@ -128,44 +141,36 @@ export default () => {
       };
       const _drawPoints = (lastPoint, nextPoint) => {
         if (nextPoint) {
-          const {centerPoint, quaternion, normal, width, thickness} = nextPoint;
+          const {centerPoint, rotationMatrix, normal, width, thickness} = nextPoint;
 
-          console.log('log', width, thickness);
+          // console.log('log', width, thickness);
 
           const localDecalGeometry = planeGeometry.clone()
             .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, width))
-            .applyMatrix4(
-              new THREE.Matrix4().lookAt(
-                centerPoint,
-                centerPoint.clone()
-                  .add(
-                    normal.clone()
-                      .cross(new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion))
-                  ),
-                normal
-              )
-            )
+            .applyMatrix4(rotationMatrix)
             // .applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(quaternion))
             .applyMatrix4(new THREE.Matrix4().makeTranslation(centerPoint.x, centerPoint.y, centerPoint.z));
 
           // if there was a previous point copy the last point's forward points to the next point's backward points
           if (lastPoint) {
-            /* const forwardLeftPoint = lastPoint.point.clone()
-              .add( */
+            const lastForwardLeftPoint = lastPoint.centerPoint.clone()
+              .add(
+                new THREE.Vector3(-lastPoint.thickness, 0, -lastPoint.width*0.5)
+                  .applyMatrix4(lastPoint.rotationMatrix)
+              );
+            const lastForwardRightPoint = lastPoint.centerPoint.clone()
+              .add(
+                new THREE.Vector3(lastPoint.thickness, 0, -lastPoint.width*0.5)
+                  .applyMatrix4(lastPoint.rotationMatrix)
+              );
 
-            const copySpec = [
-              {srcIndex: 0, dstIndices: [1, 3]},
-              {srcIndex: 2, dstIndices: [4]},
-            ];
-            for (const {srcIndex, dstIndices} of copySpec) {
-              for (const dstIndex of dstIndices) {
-                // copy over the forward points
-                let lastOffset = decalMesh.offset - localDecalGeometry.attributes.position.count;
-                if (lastOffset <= 0) {
-                  lastOffset += decalGeometry.attributes.position.count;
-                }
-                localVector.fromArray(decalGeometry.attributes.position.array, lastOffset + srcIndex * 3)
-                  .toArray(localDecalGeometry.attributes.position.array, dstIndex * 3);
+            for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
+              localVector.fromArray(planeGeometry.attributes.position.array, i*3);
+              if (localVector.z > 0) { // if this is a backward point
+                const isLeft = localVector.x < 0;
+                (isLeft ? lastForwardLeftPoint : lastForwardRightPoint)
+                // localVector.fromArray(decalGeometry.attributes.position.array, lastOffset + srcIndex * 3)
+                  .toArray(localDecalGeometry.attributes.position.array, i*3);
               }
             }
           }
