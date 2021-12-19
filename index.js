@@ -7,6 +7,7 @@ const baseUrl = import.meta.url.replace(/(\/)[^\/\\]*$/, '$1');
 
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
+const localVector3 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 
 export default () => {
@@ -19,33 +20,35 @@ export default () => {
 
   const swordLength = 1.4; // same as tail spec
   const maxNumDecals = 128;
-  const normalScale = 0.02;
+  const normalScale = 0.03;
   // const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
-  const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1)
+  const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, 32)
     // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
     .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
     .toNonIndexed();
-  const size = 0.04;
-  const decalGeometry = new THREE.BoxBufferGeometry(size, size, size).toNonIndexed();
+  // const size = 0.04;
+  // const decalGeometry = new THREE.BoxBufferGeometry(size, size, size).toNonIndexed();
   const texture = new THREE.TextureLoader().load(baseUrl + 'chevron2.svg');
   const decalMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xFF0000,
     map: texture,
+    side: THREE.DoubleSide,
+    // transparent: true,
   });
   // const m = new THREE.Mesh(planeGeometry, decalMaterial);
   // scene.add(m);
   const _makeDecalMesh = () => {
     const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(decalGeometry.attributes.position.array.length * maxNumDecals);
+    const positions = new Float32Array(planeGeometry.attributes.position.array.length * maxNumDecals);
     const positionsAttribute = new THREE.BufferAttribute(positions, 3);
     geometry.setAttribute('position', positionsAttribute);
-    const normals = new Float32Array(decalGeometry.attributes.normal.array.length * maxNumDecals);
+    const normals = new Float32Array(planeGeometry.attributes.normal.array.length * maxNumDecals);
     const normalsAttribute = new THREE.BufferAttribute(normals, 3);
     geometry.setAttribute('normal', normalsAttribute);
-    const uvs = new Float32Array(decalGeometry.attributes.uv.array.length * maxNumDecals);
+    const uvs = new Float32Array(planeGeometry.attributes.uv.array.length * maxNumDecals);
     const uvsAttribute = new THREE.BufferAttribute(uvs, 2);
     geometry.setAttribute('uv', uvsAttribute);
-    // const indices = new Uint16Array(decalGeometry.index.array.length * maxNumDecals);
+    // const indices = new Uint16Array(planeGeometry.index.array.length * maxNumDecals);
     // const indicesAttribute = new THREE.BufferAttribute(indices, 1);
     // geometry.setIndex(indicesAttribute);
 
@@ -75,7 +78,7 @@ export default () => {
             const normalScaled = normal.clone().multiplyScalar(normalScale);
             const centerPoint = hitPoint.clone().add(normalScaled);
     
-            const normalQuaternion = new THREE.Quaternion().setFromUnitVectors(
+            const normalDownQuaternion = new THREE.Quaternion().setFromUnitVectors(
               new THREE.Vector3(0, 0, 1),
               normal
             );
@@ -87,7 +90,7 @@ export default () => {
               );
             const leftResult = physics.raycast(
               leftPoint,
-              normalQuaternion
+              normalDownQuaternion
             );
             if (leftResult) {
               const leftPointVec = new THREE.Vector3().fromArray(leftResult.point);
@@ -103,7 +106,7 @@ export default () => {
               );
             const rightResult = physics.raycast(
               rightPoint,
-              normalQuaternion
+              normalDownQuaternion
             );
             if (rightResult) {
               const rightPointVec = new THREE.Vector3().fromArray(rightResult.point);
@@ -130,7 +133,9 @@ export default () => {
               centerPoint,
               // quaternion: localQuaternion.clone(),
               rotationMatrix,
-              // normal,
+              normal,
+              normalScaled,
+              normalDownQuaternion,
               width,
               thickness,
               forwardLeftPoint: null,
@@ -145,7 +150,7 @@ export default () => {
       };
       const _drawPoints = (lastPoint, nextPoint) => {
         if (nextPoint) {
-          const {centerPoint, rotationMatrix, normal, width, thickness} = nextPoint;
+          const {centerPoint, rotationMatrix, normal, normalScaled, normalDownQuaternion, width, thickness} = nextPoint;
 
           // console.log('log', width, thickness);
 
@@ -178,6 +183,22 @@ export default () => {
               }
             }
           }
+
+          // make the local decal geometry conform to the object mesh by raycasting from the decal mesh points down the normal
+          for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
+            localVector.fromArray(localDecalGeometry.attributes.position.array, i*3);
+            const result = physics.raycast(localVector, normalDownQuaternion);
+            if (result) {
+              localVector3.fromArray(result.point);
+              if (localVector.distanceTo(localVector3) < swordLength) {
+                localVector3
+                  .add(normalScaled)
+                  .toArray(localDecalGeometry.attributes.position.array, i*3);
+              }
+            }
+          }
+
+
           nextPoint.forwardLeftPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 0*3);
           nextPoint.forwardRightPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 2*3);
 
