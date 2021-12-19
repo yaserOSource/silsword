@@ -133,6 +133,8 @@ export default () => {
               // normal,
               width,
               thickness,
+              forwardLeftPoint: null,
+              forwardRightPoint: null,
             };
           } else {
             return null;
@@ -155,7 +157,7 @@ export default () => {
 
           // if there was a previous point copy the last point's forward points to the next point's backward points
           if (lastPoint) {
-            const lastForwardLeftPoint = lastPoint.centerPoint.clone()
+            /* const lastForwardLeftPoint = lastPoint.centerPoint.clone()
               .add(
                 new THREE.Vector3(-lastPoint.thickness, 0, -lastPoint.width*0.5)
                   .applyMatrix4(lastPoint.rotationMatrix)
@@ -164,18 +166,20 @@ export default () => {
               .add(
                 new THREE.Vector3(lastPoint.thickness, 0, -lastPoint.width*0.5)
                   .applyMatrix4(lastPoint.rotationMatrix)
-              );
+              ); */
 
             for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
               localVector.fromArray(planeGeometry.attributes.position.array, i*3);
               if (localVector.z > 0) { // if this is a backward point
                 const isLeft = localVector.x < 0;
-                (isLeft ? lastForwardLeftPoint : lastForwardRightPoint)
+                (isLeft ? lastPoint.forwardLeftPoint : lastPoint.forwardRightPoint)
                 // localVector.fromArray(decalGeometry.attributes.position.array, lastOffset + srcIndex * 3)
                   .toArray(localDecalGeometry.attributes.position.array, i*3);
               }
             }
           }
+          nextPoint.forwardLeftPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 0*3);
+          nextPoint.forwardRightPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 2*3);
 
           decalMesh.mergeGeometry(localDecalGeometry);
         }
