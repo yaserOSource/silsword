@@ -13,7 +13,7 @@ const localQuaternion = new THREE.Quaternion();
 export default () => {
   const app = useApp();
   const scene = useScene();
-  const {sceneLowPriority} = useInternals();
+  const {renderer, sceneLowPriority} = useInternals();
   const physics = usePhysics();
 
   const {components} = app;
@@ -23,12 +23,13 @@ export default () => {
   const maxNumDecals = 128;
   const normalScale = 0.03;
   // const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
-  const numSegments = 128;
-  const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, numSegments)
+  const numSegments = 64;
+  const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, 2)
     // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
     .applyMatrix4(new THREE.Matrix4().makeTranslation(0, -0.5, 0))
     .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
     .toNonIndexed();
+  window.planeGeometry = planeGeometry;
   
   const texture = new THREE.TextureLoader().load(baseUrl + 'chevron2.svg');
   const decalMaterial = new THREE.MeshPhysicalMaterial({
@@ -40,21 +41,25 @@ export default () => {
 
   // const m = new THREE.Mesh(planeGeometry, decalMaterial);
   // scene.add(m);
-  const boxGeometry = new THREE.BoxBufferGeometry(0.05, 0.05, 0.05);
+  const boxGeometry = new THREE.BoxBufferGeometry(0.02, 0.02, 0.02);
   const currentTransformMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: 0xff0000}));
   scene.add(currentTransformMesh);
   const backTransformMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: 0x0000ff}));
   scene.add(backTransformMesh);
 
+  const box2Geometry = new THREE.BoxBufferGeometry(0.005, 0.005, 1)
+    .applyMatrix4(new THREE.Matrix4().makeTranslation(0, 0, -0.5))
+    .applyMatrix4(new THREE.Matrix4().makeScale(1, 1, swordBackOffset + swordLength))
+
   const _makeDecalMesh = () => {
     const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(planeGeometry.attributes.position.array.length * maxNumDecals);
+    const positions = new Float32Array(planeGeometry.attributes.position.array.length * numSegments * maxNumDecals);
     const positionsAttribute = new THREE.BufferAttribute(positions, 3);
     geometry.setAttribute('position', positionsAttribute);
-    const normals = new Float32Array(planeGeometry.attributes.normal.array.length * maxNumDecals);
+    const normals = new Float32Array(planeGeometry.attributes.normal.array.length * numSegments * maxNumDecals);
     const normalsAttribute = new THREE.BufferAttribute(normals, 3);
     geometry.setAttribute('normal', normalsAttribute);
-    const uvs = new Float32Array(planeGeometry.attributes.uv.array.length * maxNumDecals);
+    const uvs = new Float32Array(planeGeometry.attributes.uv.array.length * numSegments * maxNumDecals);
     const uvsAttribute = new THREE.BufferAttribute(uvs, 2);
     geometry.setAttribute('uv', uvsAttribute);
     // const indices = new Uint16Array(planeGeometry.index.array.length * maxNumDecals);
@@ -65,72 +70,97 @@ export default () => {
     decalMesh.name = 'DecalMesh';
     decalMesh.frustumCulled = false;
     decalMesh.offset = 0;
+    let startSwordTransform = null;
     let lastSwordTransform = null;
     let lastHitPoint = null;
     const width = 0.2;
     const thickness = 0.05;
     decalMesh.update = (using, matrixWorld) => {
-      matrixWorld.decompose(localVector, localQuaternion, localVector2);
-      localQuaternion.multiply(
-        new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI*0.5)
-      );
-      const swordBackPosition = localVector.clone()
-        .add(
-          new THREE.Vector3(0, 0, swordBackOffset)
-            .applyQuaternion(localQuaternion)
+      const _getCurrentSwordTransform = () => {
+        matrixWorld.decompose(localVector, localQuaternion, localVector2);
+        localQuaternion.multiply(
+          new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI*0.5)
         );
-      const currentSwordTransform = {
-        position: swordBackPosition,
-        quaternion: localQuaternion.clone(),
-        line: new THREE.Line3(
-          localVector.clone()
-            .add(
-              new THREE.Vector3(0, 0, swordBackOffset)
-                .applyQuaternion(localQuaternion)
-            ),
-          localVector.clone()
-            .add(
-              new THREE.Vector3(0, 0, -swordLength)
-                .applyQuaternion(localQuaternion)
-            )
-        ),
+        /* const swordBackPosition = localVector.clone()
+          .add(
+            new THREE.Vector3(0, 0, swordBackOffset)
+              .applyQuaternion(localQuaternion)
+          ); */
+        return {
+          position: localVector.clone(),
+          quaternion: localQuaternion.clone(),
+          line: new THREE.Line3(
+            localVector.clone()
+              .add(
+                new THREE.Vector3(0, 0, swordBackOffset)
+                  .applyQuaternion(localQuaternion)
+              ),
+            localVector.clone()
+              .add(
+                new THREE.Vector3(0, 0, -swordLength)
+                  .applyQuaternion(localQuaternion)
+              )
+          ),
+        };
       };
+      const endSwordTransform = _getCurrentSwordTransform();
 
-      currentTransformMesh.position.copy(
-        currentSwordTransform.position
-      ).add(
-        new THREE.Vector3(0, 0, -(swordBackOffset + swordLength))
-          .applyQuaternion(localQuaternion)
-      );
-      currentTransformMesh.quaternion.copy(currentSwordTransform.quaternion);
-      currentTransformMesh.updateMatrixWorld();
+      // debug meshes
+      {
+        currentTransformMesh.position.copy(
+          endSwordTransform.position
+        ).add(
+          new THREE.Vector3(0, 0, -swordLength)
+            .applyQuaternion(endSwordTransform.quaternion)
+        );
+        currentTransformMesh.quaternion.copy(endSwordTransform.quaternion);
+        currentTransformMesh.updateMatrixWorld();
 
-      backTransformMesh.position.copy(
-        currentSwordTransform.position
-      );
-      backTransformMesh.quaternion.copy(backTransformMesh.quaternion);
-      backTransformMesh.updateMatrixWorld();
+        backTransformMesh.position.copy(
+          endSwordTransform.position
+        ).add(
+          new THREE.Vector3(0, 0, swordBackOffset)
+            .applyQuaternion(endSwordTransform.quaternion)
+        );
+        backTransformMesh.quaternion.copy(endSwordTransform.quaternion);
+        backTransformMesh.updateMatrixWorld();
+      }
 
       if (!using) {
-        lastSwordTransform = currentSwordTransform;
+        startSwordTransform = endSwordTransform;
+        lastSwordTransform = endSwordTransform;
         lastHitPoint = null;
         return;
       }
 
-      const _getNextPoint = () => {
-        const result = physics.raycast(localVector, localQuaternion);
+      const _lerpSwordTransform = (a, b, f) => {
+        // console.log('lerp', f);
+        return {
+          position: a.position.clone().lerp(b.position, f),
+          quaternion: a.quaternion.clone().slerp(b.quaternion, f),
+          line: new THREE.Line3(
+            a.line.start.clone().lerp(b.line.start, f),
+            a.line.end.clone().lerp(b.line.end, f),
+          ),
+        };
+      };
+      const _getNextPoint = (currentSwordTransform, i) => {
+        // raycasts.push([startSwordTransform.position.toArray(), endSwordTransform.position.toArray(), currentSwordTransform.position.toArray(), currentSwordTransform.quaternion.toArray()]);
+        const backPoint = currentSwordTransform.position.clone()
+          .add(new THREE.Vector3(0, 0, swordBackOffset).applyQuaternion(currentSwordTransform.quaternion));
+        const result = physics.raycast(backPoint, currentSwordTransform.quaternion);
         if (result) {
           const hitPoint = new THREE.Vector3().fromArray(result.point);
-          if (hitPoint.distanceTo(localVector) <= (swordBackOffset + swordLength)) {
-            {
-              const hitMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: 0x8008080}));
+          if (hitPoint.distanceTo(currentSwordTransform.position) <= (swordBackOffset + swordLength)) {
+            /* // debug meshes
+            // {
+              const hitMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: i === 0 ? 0x00FF00 : 0x808080}));
               hitMesh.position.copy(hitPoint);
               hitMesh.updateMatrixWorld();
               scene.add(hitMesh);
-              // console.log('hit');
-            }
+            // } */
 
-            const normal = new THREE.Vector3().fromArray(result.normal);
+            const normal = new THREE.Vector3(0, 0, 1).applyQuaternion(currentSwordTransform.quaternion); // new THREE.Vector3().fromArray(result.normal);
 
             const normalScaled = normal.clone().multiplyScalar(normalScale);
             const normalBack = normal.clone().multiplyScalar(swordBackOffset);
@@ -139,33 +169,6 @@ export default () => {
               new THREE.Vector3(0, 0, 1),
               normal
             );
-
-            /* const forwardPoint = localVector.clone()
-              .add(
-                new THREE.Vector3(-0.1, 0, 0)
-                  .applyQuaternion(localQuaternion)
-              );
-            const forwardResult = physics.raycast(
-              forwardPoint,
-              normalDownQuaternion
-            );
-            if (forwardResult) {
-              const forwardPointVec = new THREE.Vector3().fromArray(forwardResult.point);
-              if (forwardPointVec.distanceTo(localVector) <= swordLength) {
-                forwardPoint.copy(forwardPointVec);
-              }
-            } else {
-              forwardPoint.add(
-                new THREE.Vector3(0, 0, -swordLength)
-                  .applyQuaternion(localQuaternion)
-              );
-            } */
-
-            /* const rotationMatrix = new THREE.Matrix4().lookAt(
-              hitPoint,
-              hitPoint.clone().add(forwardPoint),
-              normal
-            ); */
     
             let rotationMatrix;
             let localWidth;
@@ -197,7 +200,7 @@ export default () => {
               hitPoint,
               // centerPoint,
               // forwardPoint,
-              swordQuaternion: localQuaternion.clone(),
+              swordQuaternion: currentSwordTransform.quaternion.clone(),
               rotationMatrix,
               normal,
               normalBack,
@@ -209,120 +212,170 @@ export default () => {
               forwardRightPoint: null,
             };
           } else {
-            return null;
+            return false;
           }
         } else {
-          return null;
+          return 0;
         }
       };
-      const _drawPoints = (lastHitPoint, nextPoint) => {
-        if (nextPoint) {
-          let {hitPoint, swordQuaternion, rotationMatrix, normal, normalBack, normalScaled, normalDownQuaternion, width, thickness} = nextPoint;
+      const localDecalGeometries = [];
+      // let firstHit = false;
+      const _drawPoints = () => {
+        for (let i = 1; i < numSegments; i++) {
+          const f = i/(numSegments - 1);
 
-          // console.log('log', width, thickness);
+          const currentSwordTransform = _lerpSwordTransform(startSwordTransform, endSwordTransform, f);
+          /* if (using) {
+            const hitMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: i === 0 ? 0x00FF00 : 0x808080}));
+            hitMesh.position.copy(currentSwordTransform.position)
+              .add(new THREE.Vector3(0, 0, -swordLength).applyQuaternion(currentSwordTransform.quaternion));
+            hitMesh.quaternion.copy(currentSwordTransform.quaternion);
+            hitMesh.updateMatrixWorld();
+            scene.add(hitMesh);
 
-          const localDecalGeometry = planeGeometry.clone();
-          
-          /* if (lastHitPoint) {
-            rotationMatrix = new THREE.Matrix4().lookAt(
-              lastHitPoint.forwardPoint,
-              forwardPoint,
-              lastHitPoint.normal
+            const hitMesh2 = new THREE.Mesh(
+              box2Geometry,
+              new THREE.MeshBasicMaterial({color: 0x00FF00})
             );
-            normal = new THREE.Vector3(0, 1, 0).applyMatrix4(rotationMatrix);
-            normalDownQuaternion = new THREE.Quaternion()
-              .setFromRotationMatrix(rotationMatrix)
-              .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI*0.5));
-            normalScaled = normal.clone().multiplyScalar(normalScale);
+            hitMesh2.position.copy(currentSwordTransform.position)
+              .add(new THREE.Vector3(0, 0, swordBackOffset).applyQuaternion(currentSwordTransform.quaternion));
+            hitMesh2.quaternion.copy(currentSwordTransform.quaternion);
+            hitMesh2.updateMatrixWorld();
+            scene.add(hitMesh2);
           } */
-          localDecalGeometry
-            .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, width))
-            .applyMatrix4(rotationMatrix)
-            .applyMatrix4(new THREE.Matrix4().makeTranslation(
-              hitPoint.x,
-              hitPoint.y,
-              hitPoint.z
-            ));
-
-          // if there was a previous point, copy the last point's forward points to the next point's backward points
-          if (lastHitPoint) {
-            // console.log('lp 1');
-            for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
-              localVector.fromArray(planeGeometry.attributes.position.array, i*3);
-              if (localVector.z >= 1) { // if this is a backward point
-                // console.log('got');
-                const isLeft = localVector.x < 0;
-                (isLeft ? lastHitPoint.forwardLeftPoint : lastHitPoint.forwardRightPoint)
-                // localVector.fromArray(decalGeometry.attributes.position.array, lastOffset + srcIndex * 3)
-                  .toArray(localDecalGeometry.attributes.position.array, i*3);
-              }
-            }
-            // console.log('lp 2');
+          const nextPoint = _getNextPoint(currentSwordTransform, i);
+          
+          /* if (!firstHit && i === 0 && !!nextPoint) {
+            firstHit = true;
           }
+          if (firstHit) {
+            if (i === 0) {
+              console.log('hit 0', {currentSwordTransform, startSwordTransform, endSwordTransform, lastSwordTransform, nextPoint, lastHitPoint, });
+            } else if (i === 1) {
+              console.log('hit 1', {currentSwordTransform, startSwordTransform, endSwordTransform, lastSwordTransform, nextPoint, lastHitPoint, });
+            } else if (i === (numSegments - 2)) {
+              console.log('hit -2', {currentSwordTransform, startSwordTransform, endSwordTransform, lastSwordTransform, nextPoint, lastHitPoint, });
+            } else if (i === (numSegments - 1)) {
+              console.log('hit -1', {currentSwordTransform, startSwordTransform, endSwordTransform, lastSwordTransform, nextPoint, lastHitPoint, });
+            }
+          } */
 
-          // make the local decal geometry conform to the object mesh by raycasting from the decal mesh points down the normal
-          for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
-            localVector.fromArray(planeGeometry.attributes.position.array, i*3);
-            if (localVector.z < 1) { // if this is not a backward point
-              localVector.fromArray(localDecalGeometry.attributes.position.array, i*3)
-                .add(normalBack);
-              const result = physics.raycast(localVector, normalDownQuaternion);
-              if (result) {
-                localVector3.fromArray(result.point);
-                if (localVector.distanceTo(localVector3) < (swordBackOffset + swordLength)) {
-                  localVector3
-                    .add(normalScaled)
+          if (nextPoint) {
+            console.log('hit', i);
+            let {hitPoint, swordQuaternion, rotationMatrix, normal, normalBack, normalScaled, normalDownQuaternion, width, thickness} = nextPoint;
+
+            const localDecalGeometry = planeGeometry.clone();
+            
+            /* if (lastHitPoint) {
+              rotationMatrix = new THREE.Matrix4().lookAt(
+                lastHitPoint.forwardPoint,
+                forwardPoint,
+                lastHitPoint.normal
+              );
+              normal = new THREE.Vector3(0, 1, 0).applyMatrix4(rotationMatrix);
+              normalDownQuaternion = new THREE.Quaternion()
+                .setFromRotationMatrix(rotationMatrix)
+                .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI*0.5));
+              normalScaled = normal.clone().multiplyScalar(normalScale);
+            } */
+            localDecalGeometry
+              .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, width))
+              .applyMatrix4(rotationMatrix)
+              .applyMatrix4(new THREE.Matrix4().makeTranslation(
+                hitPoint.x,
+                hitPoint.y,
+                hitPoint.z
+              ));
+
+            // if there was a previous point, copy the last point's forward points to the next point's backward points
+            if (lastHitPoint) {
+              // console.log('lp 1');
+              for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
+                localVector.fromArray(planeGeometry.attributes.position.array, i*3);
+                if (localVector.z >= 1) { // if this is a backward point
+                  // console.log('got');
+                  const isLeft = localVector.x < 0;
+                  (isLeft ? lastHitPoint.forwardLeftPoint : lastHitPoint.forwardRightPoint)
+                  // localVector.fromArray(decalGeometry.attributes.position.array, lastOffset + srcIndex * 3)
                     .toArray(localDecalGeometry.attributes.position.array, i*3);
                 }
               }
+              // console.log('lp 2');
             }
+
+           /*  // make the local decal geometry conform to the object mesh by raycasting from the decal mesh points down the normal
+            for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
+              localVector.fromArray(planeGeometry.attributes.position.array, i*3);
+              if (localVector.z < 1) { // if this is not a backward point
+                localVector.fromArray(localDecalGeometry.attributes.position.array, i*3)
+                  .add(normalBack);
+                const result = physics.raycast(localVector, normalDownQuaternion);
+                if (result) {
+                  localVector3.fromArray(result.point);
+                  if (localVector.distanceTo(localVector3) < (swordBackOffset + swordLength)) {
+                    localVector3
+                      .add(normalScaled)
+                      .toArray(localDecalGeometry.attributes.position.array, i*3);
+                  }
+                }
+              }
+            } */
+
+            for (let i = 0; i < localDecalGeometry.attributes.position.array.length; i++) {
+              if (isNaN(localDecalGeometry.attributes.position.array[i])) {
+                debugger;
+              }
+            }
+
+            nextPoint.forwardLeftPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 0*3);
+            nextPoint.forwardRightPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 2*3);
+            localDecalGeometries.push(localDecalGeometry);
           }
 
-          nextPoint.forwardLeftPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 0*3);
-          nextPoint.forwardRightPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 2*3);
-
-          decalMesh.mergeGeometry(localDecalGeometry);
+          lastSwordTransform = currentSwordTransform;
+          lastHitPoint = nextPoint;
         }
       };
-      const nextPoint = _getNextPoint();
-      _drawPoints(lastHitPoint, nextPoint);
-
-      lastSwordTransform = currentSwordTransform;
-      lastHitPoint = nextPoint;
+      _drawPoints();
+      decalMesh.mergeGeometries(localDecalGeometries);
+      startSwordTransform = endSwordTransform;
+      lastSwordTransform = endSwordTransform;
     };
-    decalMesh.mergeGeometry = localDecalGeometry => {
-      const offset = decalMesh.offset;
-      // console.log('offset', decalMesh.offset);
-      for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
-        decalMesh.geometry.attributes.position.setXYZ( i + offset, localDecalGeometry.attributes.position.getX(i), localDecalGeometry.attributes.position.getY(i), localDecalGeometry.attributes.position.getZ(i) );
-        decalMesh.geometry.attributes.uv.setXY( i + offset, localDecalGeometry.attributes.uv.getX(i), localDecalGeometry.attributes.uv.getY(i) );
-        decalMesh.geometry.attributes.normal.setXYZ( i + offset, localDecalGeometry.attributes.normal.getX(i), localDecalGeometry.attributes.normal.getY(i), localDecalGeometry.attributes.normal.getZ(i) );
-        // decalMesh.geometry.index.setX( i + offset, localDecalGeometry.index.getX(i) );
+    decalMesh.mergeGeometries = localDecalGeometies => {
+      for (const localDecalGeometry of localDecalGeometies) {
+        const startOffset = decalMesh.offset;
+        // console.log('offset', decalMesh.offset);
+        for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
+          decalMesh.geometry.attributes.position.setXYZ( i + startOffset, localDecalGeometry.attributes.position.getX(i), localDecalGeometry.attributes.position.getY(i), localDecalGeometry.attributes.position.getZ(i) );
+          decalMesh.geometry.attributes.uv.setXY( i + startOffset, localDecalGeometry.attributes.uv.getX(i), localDecalGeometry.attributes.uv.getY(i) );
+          decalMesh.geometry.attributes.normal.setXYZ( i + startOffset, localDecalGeometry.attributes.normal.getX(i), localDecalGeometry.attributes.normal.getY(i), localDecalGeometry.attributes.normal.getZ(i) );
+          // decalMesh.geometry.index.setX( i + offset, localDecalGeometry.index.getX(i) );
+        }
+
+        // flag geometry attributes for update
+        decalMesh.geometry.attributes.position.updateRange = {
+          offset: startOffset*3,
+          count: localDecalGeometry.attributes.position.array.length,
+        };
+        decalMesh.geometry.attributes.position.needsUpdate = true;
+        renderer.attributes.update(decalMesh.geometry.attributes.position, WebGLRenderingContext.ARRAY_BUFFER);
+        /* decalMesh.geometry.attributes.uv.updateRange = {
+          offset: startOffset*2,
+          count: localDecalGeometry.attributes.uv.count*3,
+        }; */
+        decalMesh.geometry.attributes.uv.needsUpdate = true;
+        renderer.attributes.update(decalMesh.geometry.attributes.uv, WebGLRenderingContext.ARRAY_BUFFER);
+        /* decalMesh.geometry.attributes.normal.updateRange = {
+          offset: startOffset*3,
+          count: localDecalGeometry.attributes.normal.count*3,
+        }; */
+        decalMesh.geometry.attributes.normal.needsUpdate = true;
+        renderer.attributes.update(decalMesh.geometry.attributes.normal, WebGLRenderingContext.ARRAY_BUFFER);
+
+        // update geometry attribute offset
+        decalMesh.offset += localDecalGeometry.attributes.position.count;
+        decalMesh.offset = decalMesh.offset % decalMesh.geometry.attributes.position.count;
       }
-      // flag geometry attributes for update
-      decalMesh.geometry.attributes.position.updateRange = {
-        offset: offset*3,
-        count: localDecalGeometry.attributes.position.array.length,
-      };
-      decalMesh.geometry.attributes.position.needsUpdate = true;
-      decalMesh.geometry.attributes.uv.updateRange = {
-        offset: offset*2,
-        count: localDecalGeometry.attributes.uv.array.length,
-      };
-      decalMesh.geometry.attributes.uv.needsUpdate = true;
-      decalMesh.geometry.attributes.normal.updateRange = {
-        offset: offset*3,
-        count: localDecalGeometry.attributes.normal.array.length,
-      };
-      decalMesh.geometry.attributes.normal.needsUpdate = true;
-      // decalMesh.geometry.index.updateRange = {
-      //   offset,
-      //   count: localDecalGeometry.index.count,
-      // };
-      //decalMesh.geometry.index.needsUpdate = true;
-      // update geometry attribute offset
-      decalMesh.offset += localDecalGeometry.attributes.position.count;
-      decalMesh.offset = decalMesh.offset % decalMesh.geometry.attributes.position.count;
     };
 
     return decalMesh;
