@@ -64,13 +64,60 @@ export default () => {
 
         const result = physics.raycast(localVector, localQuaternion);
         if (result) {
-          const point = new THREE.Vector3().fromArray(result.point);
-          if (point.distanceTo(localVector) <= swordLength) {
+          const hitPoint = new THREE.Vector3().fromArray(result.point);
+          if (hitPoint.distanceTo(localVector) <= swordLength) {
             const normal = new THREE.Vector3().fromArray(result.normal);
 
+            const normalScaled = normal.clone().multiplyScalar(0.01);
+            const centerPoint = hitPoint.clone().add(normalScaled);
+    
+            const normalQuaternion = new THREE.Quaternion().setFromUnitVectors(
+              new THREE.Vector3(0, 0, 1),
+              normal
+            );
+    
+            const leftPoint = centerPoint.clone()
+              .add(
+                new THREE.Vector3(-0.1, 0, 0)
+                  .applyQuaternion(localQuaternion)
+              );
+            const leftResult = physics.raycast(
+              leftPoint,
+              normalQuaternion
+            );
+            if (leftResult) {
+              const leftPointVec = new THREE.Vector3().fromArray(leftResult.point);
+              if (leftPointVec.distanceTo(localVector) <= swordLength) {
+                leftPoint.copy(leftPointVec);
+              }
+            }
+    
+            const rightPoint = centerPoint.clone()
+              .add(
+                new THREE.Vector3(0.1, 0, 0)
+                  .applyQuaternion(localQuaternion)
+              );
+            const rightResult = physics.raycast(
+              rightPoint,
+              normalQuaternion
+            );
+            if (rightResult) {
+              const rightPointVec = new THREE.Vector3().fromArray(rightResult.point);
+              if (rightPointVec.distanceTo(localVector) <= swordLength) {
+                rightPoint.copy(rightPointVec);
+              }
+            }
+    
+            const width = leftPoint.distanceTo(rightPoint);
+            const thickness = 0.05;
+
             return {
-              point,
+              // hitPoint,
+              centerPoint,
+              quaternion: localQuaternion.clone(),
               normal,
+              width,
+              thickness,
             };
           } else {
             return null;
@@ -81,50 +128,7 @@ export default () => {
       };
       const _drawPoints = (lastPoint, nextPoint) => {
         if (nextPoint) {
-          const {point, normal} = nextPoint;
-  
-          const normalScaled = normal.clone().multiplyScalar(0.01);
-          const centerPoint = point.clone().add(normalScaled);
-  
-          const normalQuaternion = new THREE.Quaternion().setFromUnitVectors(
-            new THREE.Vector3(0, 0, 1),
-            normal
-          );
-  
-          const leftPoint = centerPoint.clone()
-            .add(
-              new THREE.Vector3(-0.1, 0, 0)
-                .applyQuaternion(localQuaternion)
-            );
-          const leftResult = physics.raycast(
-            leftPoint,
-            normalQuaternion
-          );
-          if (leftResult) {
-            const leftPointVec = new THREE.Vector3().fromArray(leftResult.point);
-            if (leftPointVec.distanceTo(localVector) <= swordLength) {
-              leftPoint.copy(leftPointVec);
-            }
-          }
-  
-          const rightPoint = centerPoint.clone()
-            .add(
-              new THREE.Vector3(0.1, 0, 0)
-                .applyQuaternion(localQuaternion)
-            );
-          const rightResult = physics.raycast(
-            rightPoint,
-            normalQuaternion
-          );
-          if (rightResult) {
-            const rightPointVec = new THREE.Vector3().fromArray(rightResult.point);
-            if (rightPointVec.distanceTo(localVector) <= swordLength) {
-              rightPoint.copy(rightPointVec);
-            }
-          }
-  
-          const width = leftPoint.distanceTo(rightPoint);
-          const thickness = 0.05;
+          const {centerPoint, quaternion, normal, width, thickness} = nextPoint;
 
           console.log('log', width, thickness);
 
@@ -136,16 +140,19 @@ export default () => {
                 centerPoint.clone()
                   .add(
                     normal.clone()
-                      .cross(new THREE.Vector3(0, 1, 0).applyQuaternion(localQuaternion))
+                      .cross(new THREE.Vector3(0, 1, 0).applyQuaternion(quaternion))
                   ),
                 normal
               )
             )
-            // .applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(localQuaternion))
+            // .applyMatrix4(new THREE.Matrix4().makeRotationFromQuaternion(quaternion))
             .applyMatrix4(new THREE.Matrix4().makeTranslation(centerPoint.x, centerPoint.y, centerPoint.z));
 
           // if there was a previous point copy the last point's forward points to the next point's backward points
           if (lastPoint) {
+            /* const forwardLeftPoint = lastPoint.point.clone()
+              .add( */
+
             const copySpec = [
               {srcIndex: 0, dstIndices: [1, 3]},
               {srcIndex: 2, dstIndices: [4]},
