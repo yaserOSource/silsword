@@ -32,6 +32,8 @@ export default () => {
     color: 0xFF0000,
     map: texture,
   });
+  // const m = new THREE.Mesh(planeGeometry, decalMaterial);
+  // scene.add(m);
   const _makeDecalMesh = () => {
     const geometry = new THREE.BufferGeometry();
     const positions = new Float32Array(decalGeometry.attributes.position.array.length * maxNumDecals);
