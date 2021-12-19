@@ -76,7 +76,6 @@ export default () => {
             normal
           );
 
-          // const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, newPointVec);
           const leftPoint = centerPoint.clone()
             .add(
               new THREE.Vector3(-0.1, 0, 0)
@@ -109,17 +108,6 @@ export default () => {
             }
           }
 
-          /* const leftPoint = plane.projectPoint(
-            newPointVec.clone().add(new THREE.Vector3(-0.1, 0, 0).applyQuaternion(localQuaternion)),
-            new THREE.Vector3()
-          ).add(normalScaled);
-          const rightPoint = plane.projectPoint(
-            newPointVec.clone().add(new THREE.Vector3(0.1, 0, 0).applyQuaternion(localQuaternion)),
-            new THREE.Vector3()
-          ).add(normalScaled); */
-
-          // const leftPoint = modiPoint.clone().add(new THREE.Vector3(-0.1, 0, 0).applyQuaternion(localQuaternion));
-          // const rightPoint = modiPoint.clone().add(new THREE.Vector3(0.1, 0, 0).applyQuaternion(localQuaternion));
           const width = leftPoint.distanceTo(rightPoint);
 
           const localDecalGeometry = planeGeometry.clone()
