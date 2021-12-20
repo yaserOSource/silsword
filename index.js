@@ -13,7 +13,7 @@ const localQuaternion = new THREE.Quaternion();
 export default () => {
   const app = useApp();
   const scene = useScene();
-  const {renderer, sceneLowPriority} = useInternals();
+  const {renderer, camera, sceneLowPriority} = useInternals();
   const physics = usePhysics();
 
   const {components} = app;
@@ -370,40 +370,96 @@ export default () => {
       startSwordTransform = endSwordTransform;
       lastSwordTransform = endSwordTransform;
     };
+    const updateRanges = [];
     decalMesh.mergeGeometries = localDecalGeometies => {
-      for (const localDecalGeometry of localDecalGeometies) {
-        const startOffset = decalMesh.offset;
-        // console.log('offset', decalMesh.offset);
-        for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
-          decalMesh.geometry.attributes.position.setXYZ( i + startOffset, localDecalGeometry.attributes.position.getX(i), localDecalGeometry.attributes.position.getY(i), localDecalGeometry.attributes.position.getZ(i) );
-          decalMesh.geometry.attributes.uv.setXY( i + startOffset, localDecalGeometry.attributes.uv.getX(i), localDecalGeometry.attributes.uv.getY(i) );
-          decalMesh.geometry.attributes.normal.setXYZ( i + startOffset, localDecalGeometry.attributes.normal.getX(i), localDecalGeometry.attributes.normal.getY(i), localDecalGeometry.attributes.normal.getZ(i) );
-          // decalMesh.geometry.index.setX( i + offset, localDecalGeometry.index.getX(i) );
+      if (localDecalGeometies.length > 0) {
+        const _makeUpdateRange = () => ({
+          position: {
+            offset: decalMesh.offset*3,
+            count: 0,
+          },
+          uv: {
+            offset: decalMesh.offset*2,
+            count: 0,
+          },
+          normal: {
+            offset: decalMesh.offset*3,
+            count: 0,
+          },
+        });
+        const lastUpdateRange = updateRanges.length > 0 ? updateRanges[updateRanges.length - 1] : null;
+        let updateRange = (
+          lastUpdateRange &&
+            ((lastUpdateRange.position.offset + lastUpdateRange.position.count) < decalMesh.geometry.attributes.position.count*3)
+        ) ? lastUpdateRange : null;
+        for (const localDecalGeometry of localDecalGeometies) {
+          const startOffset = decalMesh.offset;
+          
+          for (let i = 0; i < localDecalGeometry.attributes.position.count; i++) {
+            decalMesh.geometry.attributes.position.setXYZ( i + startOffset, localDecalGeometry.attributes.position.getX(i), localDecalGeometry.attributes.position.getY(i), localDecalGeometry.attributes.position.getZ(i) );
+            decalMesh.geometry.attributes.uv.setXY( i + startOffset, localDecalGeometry.attributes.uv.getX(i), localDecalGeometry.attributes.uv.getY(i) );
+            decalMesh.geometry.attributes.normal.setXYZ( i + startOffset, localDecalGeometry.attributes.normal.getX(i), localDecalGeometry.attributes.normal.getY(i), localDecalGeometry.attributes.normal.getZ(i) );
+            // decalMesh.geometry.index.setX( i + offset, localDecalGeometry.index.getX(i) );
+          }
+
+          if (!updateRange) {
+            updateRange = _makeUpdateRange();
+            updateRanges.push(updateRange);
+          }
+          // flag geometry attributes for update
+          /* decalMesh.geometry.attributes.position.updateRange = {
+            offset: startOffset*3,
+            count: localDecalGeometry.attributes.position.count*3,
+          }; */
+          updateRange.position.count += localDecalGeometry.attributes.position.count*3;
+          updateRange.uv.count += localDecalGeometry.attributes.uv.count*2;
+          updateRange.normal.count += localDecalGeometry.attributes.normal.count*3;
+          
+          /* renderer.attributes.update(decalMesh.geometry.attributes.position, WebGLRenderingContext.ARRAY_BUFFER);
+          decalMesh.geometry.attributes.uv.updateRange = {
+            offset: startOffset*2,
+            count: localDecalGeometry.attributes.uv.count*2,
+          };
+          decalMesh.geometry.attributes.uv.needsUpdate = true;
+          renderer.attributes.update(decalMesh.geometry.attributes.uv, WebGLRenderingContext.ARRAY_BUFFER);
+          decalMesh.geometry.attributes.normal.updateRange = {
+            offset: startOffset*3,
+            count: localDecalGeometry.attributes.normal.count*3,
+          }; */
+          // decalMesh.geometry.attributes.normal.needsUpdate = true;
+          // renderer.attributes.update(decalMesh.geometry.attributes.normal, WebGLRenderingContext.ARRAY_BUFFER);
+
+          /* {
+            console.log('compile 1');
+            const tempScene = new THREE.Scene();
+            const oldParent = decalMesh.parent;
+            tempScene.add(decalMesh);
+            renderer.compile(decalMesh, camera);
+            tempScene.remove(decalMesh);
+            if (oldParent) {
+              oldParent.add(decalMesh);
+            }
+            console.log('compile 2');
+          } */
+
+          // update geometry attribute offset
+          decalMesh.offset += localDecalGeometry.attributes.position.count;
+          if (decalMesh.offset >= decalMesh.geometry.attributes.position.count) {
+            decalMesh.offset = decalMesh.offset % decalMesh.geometry.attributes.position.count;
+            updateRange = null;
+          }
         }
-
-        // flag geometry attributes for update
-        decalMesh.geometry.attributes.position.updateRange = {
-          offset: startOffset*3,
-          count: localDecalGeometry.attributes.position.array.length,
-        };
+      }
+    };
+    decalMesh.pushGeometryUpdate = () => {
+      const updateRange = updateRanges.shift();
+      if (updateRange) {
+        decalMesh.geometry.attributes.position.updateRange = updateRange.position;
         decalMesh.geometry.attributes.position.needsUpdate = true;
-        renderer.attributes.update(decalMesh.geometry.attributes.position, WebGLRenderingContext.ARRAY_BUFFER);
-        decalMesh.geometry.attributes.uv.updateRange = {
-          offset: startOffset*2,
-          count: localDecalGeometry.attributes.uv.count*2,
-        };
+        decalMesh.geometry.attributes.uv.updateRange = updateRange.uv;
         decalMesh.geometry.attributes.uv.needsUpdate = true;
-        renderer.attributes.update(decalMesh.geometry.attributes.uv, WebGLRenderingContext.ARRAY_BUFFER);
-        decalMesh.geometry.attributes.normal.updateRange = {
-          offset: startOffset*3,
-          count: localDecalGeometry.attributes.normal.count*3,
-        };
+        decalMesh.geometry.attributes.normal.updateRange = updateRange.normal;
         decalMesh.geometry.attributes.normal.needsUpdate = true;
-        renderer.attributes.update(decalMesh.geometry.attributes.normal, WebGLRenderingContext.ARRAY_BUFFER);
-
-        // update geometry attribute offset
-        decalMesh.offset += localDecalGeometry.attributes.position.count;
-        decalMesh.offset = decalMesh.offset % decalMesh.geometry.attributes.position.count;
       }
     };
 
@@ -662,9 +718,13 @@ export default () => {
     if (trailMesh && subApp) {
       trailMesh.update(using, subApp.matrixWorld);
     }
-    const localPlayer = useLocalPlayer();
-    if (decalMesh && subApp && localPlayer.avatar) {
-      decalMesh.update(using, subApp.matrixWorld, localPlayer.avatar.modelBones.Right_arm.matrixWorld);
+    if (decalMesh) {
+      const localPlayer = useLocalPlayer();
+      if (subApp && localPlayer.avatar) {
+        decalMesh.update(using, subApp.matrixWorld, localPlayer.avatar.modelBones.Right_arm.matrixWorld);
+      }
+
+      decalMesh.pushGeometryUpdate();
     }
   });
 
