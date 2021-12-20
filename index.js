@@ -261,7 +261,7 @@ export default () => {
           } */
 
           if (nextPoint) {
-            console.log('hit', i);
+            // console.log('hit', i);
             let {hitPoint, swordQuaternion, rotationMatrix, normal, normalBack, normalScaled, normalDownQuaternion, width, thickness} = nextPoint;
 
             const localDecalGeometry = planeGeometry.clone();
