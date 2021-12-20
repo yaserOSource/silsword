@@ -148,7 +148,7 @@ export default () => {
           ), */
         };
       };
-      const _getNextPoint = (currentSwordTransform, i) => {
+      const _getNextPoint = currentSwordTransform => {
         // raycasts.push([startSwordTransform.position.toArray(), endSwordTransform.position.toArray(), currentSwordTransform.position.toArray(), currentSwordTransform.quaternion.toArray()]);
         const _getLineQuaternion = (line, q) => {
           return q.setFromRotationMatrix(
@@ -271,7 +271,7 @@ export default () => {
             hitMesh2.updateMatrixWorld();
             scene.add(hitMesh2);
           } */
-          const nextPoint = _getNextPoint(currentSwordTransform, i);
+          const nextPoint = _getNextPoint(currentSwordTransform);
           
           /* if (!firstHit && i === 0 && !!nextPoint) {
             firstHit = true;
