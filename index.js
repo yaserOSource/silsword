@@ -131,7 +131,7 @@ export default () => {
           shoulderQuaternion: a.shoulderQuaternion.clone().slerp(b.shoulderQuaternion, f),
         };
       };
-      const _getNextPoint = currentSwordTransform => {
+      const _getNextPoint = (lastSwordTransform, currentSwordTransform) => {
         const _getLineQuaternion = (line, q) => {
           return q.setFromRotationMatrix(
             new THREE.Matrix4().lookAt(
@@ -160,6 +160,11 @@ export default () => {
               hitMesh.updateMatrixWorld();
               scene.add(hitMesh);
             // } */
+
+            // if consqecutive hits are too far apart, treat them as separate hits
+            if (lastHitPoint && hitPoint.distanceTo(lastHitPoint.hitPoint) > 0.2) {
+              lastHitPoint = null;
+            }
 
             const normal = line.start.clone().sub(line.end)
               .normalize();
@@ -212,10 +217,10 @@ export default () => {
               forwardRightPoint: null,
             };
           } else {
-            return false;
+            return null;
           }
         } else {
-          return 0;
+          return null;
         }
       };
       const localDecalGeometries = [];
@@ -243,8 +248,8 @@ export default () => {
             hitMesh2.updateMatrixWorld();
             scene.add(hitMesh2);
           } */
-          const nextPoint = _getNextPoint(currentSwordTransform);
 
+          const nextPoint = _getNextPoint(lastSwordTransform, currentSwordTransform);
           if (nextPoint) {
             let {hitPoint, rotationMatrix, normal, normalBack, normalScaled, normalDownQuaternion, width, thickness} = nextPoint;
 
@@ -284,7 +289,7 @@ export default () => {
               localVector.fromArray(planeGeometry.attributes.position.array, j*3);
               if (
                 (localVector.z < 1) || // if this is a forward point
-                !lastHitPoint // if this is the first point in the chain
+                !lastHitPoint // if this is the beginning of a chain
               ) {
                 localVector.fromArray(localDecalGeometry.attributes.position.array, j*3)
                   .add(normalBack);
