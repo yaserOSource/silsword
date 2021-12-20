@@ -402,45 +402,14 @@ export default () => {
             // decalMesh.geometry.index.setX( i + offset, localDecalGeometry.index.getX(i) );
           }
 
+          // flag geometry attributes for update
           if (!updateRange) {
             updateRange = _makeUpdateRange();
             updateRanges.push(updateRange);
           }
-          // flag geometry attributes for update
-          /* decalMesh.geometry.attributes.position.updateRange = {
-            offset: startOffset*3,
-            count: localDecalGeometry.attributes.position.count*3,
-          }; */
           updateRange.position.count += localDecalGeometry.attributes.position.count*3;
           updateRange.uv.count += localDecalGeometry.attributes.uv.count*2;
           updateRange.normal.count += localDecalGeometry.attributes.normal.count*3;
-          
-          /* renderer.attributes.update(decalMesh.geometry.attributes.position, WebGLRenderingContext.ARRAY_BUFFER);
-          decalMesh.geometry.attributes.uv.updateRange = {
-            offset: startOffset*2,
-            count: localDecalGeometry.attributes.uv.count*2,
-          };
-          decalMesh.geometry.attributes.uv.needsUpdate = true;
-          renderer.attributes.update(decalMesh.geometry.attributes.uv, WebGLRenderingContext.ARRAY_BUFFER);
-          decalMesh.geometry.attributes.normal.updateRange = {
-            offset: startOffset*3,
-            count: localDecalGeometry.attributes.normal.count*3,
-          }; */
-          // decalMesh.geometry.attributes.normal.needsUpdate = true;
-          // renderer.attributes.update(decalMesh.geometry.attributes.normal, WebGLRenderingContext.ARRAY_BUFFER);
-
-          /* {
-            console.log('compile 1');
-            const tempScene = new THREE.Scene();
-            const oldParent = decalMesh.parent;
-            tempScene.add(decalMesh);
-            renderer.compile(decalMesh, camera);
-            tempScene.remove(decalMesh);
-            if (oldParent) {
-              oldParent.add(decalMesh);
-            }
-            console.log('compile 2');
-          } */
 
           // update geometry attribute offset
           decalMesh.offset += localDecalGeometry.attributes.position.count;
