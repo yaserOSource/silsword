@@ -359,16 +359,16 @@ export default () => {
         };
         decalMesh.geometry.attributes.position.needsUpdate = true;
         renderer.attributes.update(decalMesh.geometry.attributes.position, WebGLRenderingContext.ARRAY_BUFFER);
-        /* decalMesh.geometry.attributes.uv.updateRange = {
+        decalMesh.geometry.attributes.uv.updateRange = {
           offset: startOffset*2,
-          count: localDecalGeometry.attributes.uv.count*3,
-        }; */
+          count: localDecalGeometry.attributes.uv.count*2,
+        };
         decalMesh.geometry.attributes.uv.needsUpdate = true;
         renderer.attributes.update(decalMesh.geometry.attributes.uv, WebGLRenderingContext.ARRAY_BUFFER);
-        /* decalMesh.geometry.attributes.normal.updateRange = {
+        decalMesh.geometry.attributes.normal.updateRange = {
           offset: startOffset*3,
           count: localDecalGeometry.attributes.normal.count*3,
-        }; */
+        };
         decalMesh.geometry.attributes.normal.needsUpdate = true;
         renderer.attributes.update(decalMesh.geometry.attributes.normal, WebGLRenderingContext.ARRAY_BUFFER);
 
