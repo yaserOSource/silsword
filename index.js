@@ -186,7 +186,7 @@ export default () => {
 
             const normal = line.start.clone().sub(line.end)
               .normalize();
-            // const normal = new THREE.Vector3().fromArray(result.normal);
+            const hitNormal = new THREE.Vector3().fromArray(result.normal);
 
             const normalScaled = normal.clone().multiplyScalar(normalScale);
             const normalBack = normal.clone().multiplyScalar(swordBackOffset);
@@ -207,7 +207,7 @@ export default () => {
               localWidth = lastHitPoint.hitPoint.distanceTo(hitPoint);
             } else {
               const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-                normal,
+                hitNormal,
                 hitPoint
               );
               let lineProjection = plane.intersectLine(line, new THREE.Vector3());
@@ -217,7 +217,7 @@ export default () => {
               rotationMatrix = new THREE.Matrix4().lookAt(
                 lineProjection,
                 hitPoint,
-                normal
+                hitNormal
               );
               localWidth = width*0.5;
             }
