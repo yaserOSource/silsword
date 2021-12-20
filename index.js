@@ -32,6 +32,8 @@ export default () => {
   window.planeGeometry = planeGeometry;
   
   const texture = new THREE.TextureLoader().load(baseUrl + 'chevron2.svg');
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
   const decalMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xFF0000,
     map: texture,
