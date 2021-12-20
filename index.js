@@ -29,7 +29,7 @@ export default () => {
     .applyMatrix4(new THREE.Matrix4().makeTranslation(0, -0.5, 0))
     .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
     .toNonIndexed();
-  window.planeGeometry = planeGeometry;
+  // window.planeGeometry = planeGeometry;
   
   const texture = new THREE.TextureLoader().load(baseUrl + 'chevron2.svg');
   texture.wrapS = THREE.RepeatWrapping;
