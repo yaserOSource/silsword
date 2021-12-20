@@ -172,7 +172,12 @@ export default () => {
 
             const normalScaled = normal.clone().multiplyScalar(normalScale);
             const normalBack = normal.clone().multiplyScalar(swordBackOffset);
+            const hitNormalBack = hitNormal.clone().multiplyScalar(swordBackOffset);
     
+            const normalUpQuaternion = new THREE.Quaternion().setFromUnitVectors(
+              new THREE.Vector3(0, 0, -1),
+              normal
+            );
             const normalDownQuaternion = new THREE.Quaternion().setFromUnitVectors(
               new THREE.Vector3(0, 0, 1),
               normal
@@ -180,36 +185,47 @@ export default () => {
     
             let rotationMatrix;
             let localWidth;
+            let initialHit;
             if (lastHitPoint) {
               rotationMatrix = new THREE.Matrix4().lookAt(
                 lastHitPoint.hitPoint,
                 hitPoint,
-                normal
+                hitNormal
               );
               localWidth = lastHitPoint.hitPoint.distanceTo(hitPoint);
+              initialHit = false;
             } else {
+              /* const lastSwordLine = new THREE.Line3(
+                lastSwordTransform.swordPosition,
+                lastSwordTransform.swordPosition.clone()
+                  .add(new THREE.Vector3(0, 0, -swordLength).applyQuaternion(lastSwordTransform.swordQuaternion))
+              );
               const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
                 hitNormal,
                 hitPoint
               );
-              let lineProjection = plane.intersectLine(line, new THREE.Vector3());
+              let lineProjection = plane.intersectLine(lastSwordLine, new THREE.Vector3());
               if (!lineProjection) {
-                lineProjection = line.end.clone();
+                lineProjection = lastSwordLine.end.clone();
               }
               rotationMatrix = new THREE.Matrix4().lookAt(
                 lineProjection,
                 hitPoint,
                 hitNormal
               );
-              localWidth = width*0.5;
+              localWidth = width*0.5; */
+              initialHit = true;
             }
 
             return {
+              initialHit,
               hitPoint,
               rotationMatrix,
               normal,
               normalBack,
               normalScaled,
+              hitNormalBack,
+              normalUpQuaternion,
               normalDownQuaternion,
               width: localWidth,
               thickness,
@@ -250,8 +266,8 @@ export default () => {
           } */
 
           const nextPoint = _getNextPoint(lastSwordTransform, currentSwordTransform);
-          if (nextPoint) {
-            let {hitPoint, rotationMatrix, normal, normalBack, normalScaled, normalDownQuaternion, width, thickness} = nextPoint;
+          if (nextPoint && !nextPoint.initialHit) {
+            let {hitPoint, rotationMatrix, normal, normalBack, normalScaled, hitNormalBack, normalDownQuaternion, width, thickness} = nextPoint;
 
             const localDecalGeometry = planeGeometry.clone();
 
@@ -273,7 +289,7 @@ export default () => {
             uvOffset += width;
 
             // if there was a previous point, copy the last point's forward points to the next point's backward points
-            if (lastHitPoint) {
+            if (lastHitPoint && !lastHitPoint.initialHit) {
               for (let j = 0; j < localDecalGeometry.attributes.position.count; j++) {
                 localVector.fromArray(planeGeometry.attributes.position.array, j*3);
                 if (localVector.z >= 1) { // if this is a backward point
@@ -286,20 +302,28 @@ export default () => {
 
            // make the local decal geometry conform to the object mesh by raycasting from the decal mesh points down the normal
             for (let j = 0; j < localDecalGeometry.attributes.position.count; j++) {
-              localVector.fromArray(planeGeometry.attributes.position.array, j*3);
+              // localVector.fromArray(planeGeometry.attributes.position.array, j*3);
               if (
-                (localVector.z < 1) || // if this is a forward point
-                !lastHitPoint // if this is the beginning of a chain
+                localVector.z < 1 || // if this is a forward point
+                lastHitPoint.initialHit // if this is the beginning of a chain
               ) {
-                localVector.fromArray(localDecalGeometry.attributes.position.array, j*3)
+                localVector.fromArray(localDecalGeometry.attributes.position.array, j*3);
+                localVector2.copy(localVector)
                   .add(normalBack);
-                const result = physics.raycast(localVector, normalDownQuaternion);
+                const result = physics.raycast(localVector2, normalDownQuaternion);
                 if (result) {
                   localVector3.fromArray(result.point);
-                  if (localVector.distanceTo(localVector3) < (swordBackOffset + swordLength)) {
+                  if (localVector.distanceTo(localVector3) < 0.1) {
                     localVector3
                       .add(normalScaled)
                       .toArray(localDecalGeometry.attributes.position.array, j*3);
+                  } else {
+                    localVector.add(
+                      localVector2.copy(localVector3)
+                        .sub(localVector)
+                        .normalize()
+                        .multiplyScalar(0.1)
+                    ).toArray(localDecalGeometry.attributes.position.array, j*3);
                   }
                 }
               }
