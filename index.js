@@ -247,7 +247,7 @@ export default () => {
         }
       };
       const localDecalGeometries = [];
-      // let firstHit = false;
+      let uvOffset = 0;
       const _drawPoints = () => {
         for (let i = 1; i < numSegments; i++) {
           const f = i/(numSegments - 1);
@@ -314,6 +314,14 @@ export default () => {
                 hitPoint.y,
                 hitPoint.z
               ));
+            
+            const uvs = localDecalGeometry.attributes.uv.array;
+            for (let j = 0; j < localDecalGeometry.attributes.uv.count; j++) {
+              const index = j*2;
+              const yIndex = index + 1;
+              uvs[yIndex] = (uvOffset + uvs[yIndex] * width) * 4; // y
+            }
+            uvOffset += width;
 
             // if there was a previous point, copy the last point's forward points to the next point's backward points
             if (lastHitPoint) {
