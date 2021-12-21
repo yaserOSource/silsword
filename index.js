@@ -145,22 +145,18 @@ export default () => {
         return swordTransform;
       };
       const _getNextPoint = currentSwordTransform => {
-        const _getLineQuaternion = (line, q) => {
-          return q.setFromRotationMatrix(
-            new THREE.Matrix4().lookAt(
-              line.start,
-              line.end,
-              new THREE.Vector3(0, 1, 0)
-            ) 
-          );
-        };
-
         const line = localLine.set(
           currentSwordTransform.shoulderPosition,
           currentSwordTransform.swordPosition.clone()
             .add(localVector.set(0, 0, -swordLength).applyQuaternion(currentSwordTransform.swordQuaternion))
         );
-        const lineQuaternion = _getLineQuaternion(line, localQuaternion);
+        const lineQuaternion = localQuaternion.setFromRotationMatrix(
+          localMatrix.lookAt(
+            line.start,
+            line.end,
+            localVector.set(0, 1, 0)
+          )
+        );
         let result = physics.raycast(line.start, lineQuaternion);
 
         if (result) {
@@ -210,13 +206,15 @@ export default () => {
               localWidth = lastHitPoint.hitPoint.distanceTo(hitPoint);
               initialHit = false;
             } else {
+              rotationMatrix = null;
+              localWidth = 0;
               initialHit = true;
             }
 
             return {
               initialHit,
               hitPoint: hitPoint.clone(),
-              rotationMatrix: localMatrix.clone(),
+              rotationMatrix: rotationMatrix && rotationMatrix.clone(),
               normal: normal.clone(),
               normalBack: normalBack.clone(),
               normalScaled: normalScaled.clone(),
@@ -272,21 +270,13 @@ export default () => {
             const localDecalGeometry = planeGeometry.clone();
 
             localDecalGeometry
-              .applyMatrix4(
-                localMatrix.makeScale(
-                  thickness,
-                  1,
-                  width
-                )
-              )
+              .applyMatrix4(localMatrix.makeScale(thickness, 1, width))
               .applyMatrix4(rotationMatrix)
-              .applyMatrix4(
-                localMatrix.makeTranslation(
-                  hitPoint.x,
-                  hitPoint.y,
-                  hitPoint.z
-                )
-              );
+              .applyMatrix4(new THREE.Matrix4().makeTranslation(
+                hitPoint.x,
+                hitPoint.y,
+                hitPoint.z
+              ));
             
             const uvs = localDecalGeometry.attributes.uv.array;
             for (let j = 0; j < localDecalGeometry.attributes.uv.count; j++) {
