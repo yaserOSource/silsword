@@ -22,14 +22,12 @@ export default () => {
   const swordLength = 1.4;
   const maxNumDecals = 128;
   const normalScale = 0.05;
-  // const decalGeometry = new THREE.PlaneBufferGeometry(0.5, 0.5, 8, 8).toNonIndexed();
   const numSegments = 128;
   const planeGeometry = new THREE.PlaneBufferGeometry(1, 1, 1, 1)
     // .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(0, 0, 1), Math.PI*0.5))
     .applyMatrix4(new THREE.Matrix4().makeTranslation(0, -0.5, 0))
     .applyMatrix4(new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0), -Math.PI*0.5))
     .toNonIndexed();
-  // window.planeGeometry = planeGeometry;
   
   const texture = new THREE.TextureLoader().load(baseUrl + 'chevron2.svg');
   texture.wrapS = THREE.RepeatWrapping;
@@ -41,8 +39,10 @@ export default () => {
     // transparent: true,
   });
 
+  // test the decal texture
   // const m = new THREE.Mesh(planeGeometry, decalMaterial);
   // scene.add(m);
+
   const boxGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
   const currentTransformMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: 0xff0000}));
   scene.add(currentTransformMesh);
@@ -191,25 +191,6 @@ export default () => {
               localWidth = lastHitPoint.hitPoint.distanceTo(hitPoint);
               initialHit = false;
             } else {
-              /* const lastSwordLine = new THREE.Line3(
-                lastSwordTransform.swordPosition,
-                lastSwordTransform.swordPosition.clone()
-                  .add(new THREE.Vector3(0, 0, -swordLength).applyQuaternion(lastSwordTransform.swordQuaternion))
-              );
-              const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
-                hitNormal,
-                hitPoint
-              );
-              let lineProjection = plane.intersectLine(lastSwordLine, new THREE.Vector3());
-              if (!lineProjection) {
-                lineProjection = lastSwordLine.end.clone();
-              }
-              rotationMatrix = new THREE.Matrix4().lookAt(
-                lineProjection,
-                hitPoint,
-                hitNormal
-              );
-              localWidth = width*0.5; */
               initialHit = true;
             }
 
