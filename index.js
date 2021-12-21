@@ -144,6 +144,7 @@ export default () => {
         swordTransform.swordQuaternion.copy(a.swordQuaternion).slerp(b.swordQuaternion, f);
         return swordTransform;
       };
+      // XXX this should have destination sword transform as an argument, to prevent allocations
       const _getNextPoint = currentSwordTransform => {
         const line = localLine.set(
           currentSwordTransform.shoulderPosition,
