@@ -9,6 +9,27 @@ const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
 const localVector3 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
+const localQuaternion2 = new THREE.Quaternion();
+
+const _makeSwordTransform = () => {
+  return {
+    swordPosition: new THREE.Vector3(),
+    swordQuaternion: new THREE.Quaternion(),
+    shoulderPosition: new THREE.Vector3(),
+    shoulderQuaternion: new THREE.Quaternion(),
+    copy(t) {
+      this.swordPosition.copy(t.swordPosition);
+      this.swordQuaternion.copy(t.swordQuaternion);
+      this.shoulderPosition.copy(t.shoulderPosition);
+      this.shoulderQuaternion.copy(t.shoulderQuaternion);
+    }
+  };
+};
+const tempSwordTransform = _makeSwordTransform();
+const tempSwordTransform2 = _makeSwordTransform();
+
+const startSwordTransform = _makeSwordTransform();
+const lastSwordTransform = _makeSwordTransform();
 
 export default () => {
   const app = useApp();
@@ -68,32 +89,23 @@ export default () => {
     decalMesh.name = 'DecalMesh';
     decalMesh.frustumCulled = false;
     decalMesh.offset = 0;
-    let startSwordTransform = null;
-    let lastSwordTransform = null;
     let lastHitPoint = null;
     const width = 0.2;
     const thickness = 0.05;
     decalMesh.update = (using, matrixWorldSword, matrixWorldShoulder) => {
-      const _getCurrentSwordTransform = () => {
+      const _getCurrentSwordTransform = swordTransform => {
         matrixWorldSword.decompose(localVector, localQuaternion, localVector2);
         localQuaternion.multiply(
-          new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI*0.5)
+          localQuaternion2.setFromAxisAngle(localVector2.set(1, 0, 0), Math.PI*0.5)
         );
-        const swordPosition = localVector.clone();
-        const swordQuaternion = localQuaternion.clone();
+        swordTransform.swordPosition.copy(localVector);
+        swordTransform.swordQuaternion.copy(localQuaternion);
 
-        matrixWorldShoulder.decompose(localVector, localQuaternion, localVector2);
-        const shoulderPosition = localVector.clone();
-        const shoulderQuaternion = localQuaternion.clone();
+        matrixWorldShoulder.decompose(swordTransform.shoulderPosition, swordTransform.shoulderQuaternion, localVector2);
 
-        return {
-          swordPosition,
-          swordQuaternion,
-          shoulderPosition,
-          shoulderQuaternion,
-        };
+        return swordTransform;
       };
-      const endSwordTransform = _getCurrentSwordTransform();
+      const endSwordTransform = _getCurrentSwordTransform(tempSwordTransform);
 
       // debug meshes
       {
@@ -112,19 +124,18 @@ export default () => {
       }
 
       if (!using) {
-        startSwordTransform = endSwordTransform;
-        lastSwordTransform = endSwordTransform;
+        startSwordTransform.copy(endSwordTransform);
+        lastSwordTransform.copy(endSwordTransform);
         lastHitPoint = null;
         return;
       }
 
-      const _lerpSwordTransform = (a, b, f) => {
-        return {
-          swordPosition: a.swordPosition.clone().lerp(b.swordPosition, f),
-          swordQuaternion: a.swordQuaternion.clone().slerp(b.swordQuaternion, f),
-          shoulderPosition: a.shoulderPosition.clone().lerp(b.shoulderPosition, f),
-          shoulderQuaternion: a.shoulderQuaternion.clone().slerp(b.shoulderQuaternion, f),
-        };
+      const _lerpSwordTransform = (a, b, swordTransform, f) => {
+        swordTransform.shoulderPosition.copy(a.shoulderPosition).lerp(b.shoulderPosition, f);
+        swordTransform.shoulderQuaternion.copy(a.shoulderQuaternion).slerp(b.shoulderQuaternion, f);
+        swordTransform.swordPosition.copy(a.swordPosition).lerp(b.swordPosition, f);
+        swordTransform.swordQuaternion.copy(a.swordQuaternion).slerp(b.swordQuaternion, f);
+        return swordTransform;
       };
       const _getNextPoint = (lastSwordTransform, currentSwordTransform) => {
         const _getLineQuaternion = (line, q) => {
@@ -222,7 +233,7 @@ export default () => {
         for (let i = 1; i < numSegments; i++) {
           const f = i/(numSegments - 1);
 
-          const currentSwordTransform = _lerpSwordTransform(startSwordTransform, endSwordTransform, f);
+          const currentSwordTransform = _lerpSwordTransform(startSwordTransform, endSwordTransform, tempSwordTransform2, f);
           /* if (using) {
             const hitMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: i === 0 ? 0x00FF00 : 0x808080}));
             hitMesh.position.copy(currentSwordTransform.position)
@@ -315,14 +326,14 @@ export default () => {
             localDecalGeometries.push(localDecalGeometry);
           }
 
-          lastSwordTransform = currentSwordTransform;
+          lastSwordTransform.copy(currentSwordTransform);
           lastHitPoint = nextPoint;
         }
       };
       _drawPoints();
       decalMesh.mergeGeometries(localDecalGeometries);
-      startSwordTransform = endSwordTransform;
-      lastSwordTransform = endSwordTransform;
+      startSwordTransform.copy(endSwordTransform);
+      lastSwordTransform.copy(endSwordTransform);
     };
     const updateRanges = [];
     decalMesh.mergeGeometries = localDecalGeometies => {
