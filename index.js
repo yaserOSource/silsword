@@ -223,8 +223,8 @@ export default () => {
               normalDownQuaternion: normalDownQuaternion.clone(),
               width: localWidth,
               thickness,
-              forwardLeftPoint: null,
-              forwardRightPoint: null,
+              forwardLeftPoint: new THREE.Vector3(),
+              forwardRightPoint: new THREE.Vector3(),
             };
           } else {
             return null;
@@ -327,8 +327,8 @@ export default () => {
               }
             }
 
-            nextPoint.forwardLeftPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 0*3);
-            nextPoint.forwardRightPoint = new THREE.Vector3().fromArray(localDecalGeometry.attributes.position.array, 2*3);
+            nextPoint.forwardLeftPoint.fromArray(localDecalGeometry.attributes.position.array, 0*3);
+            nextPoint.forwardRightPoint.fromArray(localDecalGeometry.attributes.position.array, 2*3);
             localDecalGeometries.push(localDecalGeometry);
           }
 
