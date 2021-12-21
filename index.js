@@ -137,7 +137,7 @@ export default () => {
         swordTransform.swordQuaternion.copy(a.swordQuaternion).slerp(b.swordQuaternion, f);
         return swordTransform;
       };
-      const _getNextPoint = (lastSwordTransform, currentSwordTransform) => {
+      const _getNextPoint = (currentSwordTransform) => {
         const _getLineQuaternion = (line, q) => {
           return q.setFromRotationMatrix(
             new THREE.Matrix4().lookAt(
@@ -257,7 +257,7 @@ export default () => {
             scene.add(hitMesh2);
           } */
 
-          const nextPoint = _getNextPoint(lastSwordTransform, currentSwordTransform);
+          const nextPoint = _getNextPoint(currentSwordTransform);
           if (nextPoint && !nextPoint.initialHit) {
             let {hitPoint, rotationMatrix, normal, normalBack, normalScaled, hitNormalBack, normalDownQuaternion, width, thickness} = nextPoint;
 
