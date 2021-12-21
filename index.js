@@ -44,15 +44,10 @@ export default () => {
   // const m = new THREE.Mesh(planeGeometry, decalMaterial);
   // scene.add(m);
   const boxGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
-  const boxGeometry3 = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
   const currentTransformMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: 0xff0000}));
   scene.add(currentTransformMesh);
   const backTransformMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: 0x0000ff}));
   scene.add(backTransformMesh);
-
-  const box2Geometry = new THREE.BoxBufferGeometry(0.005, 0.005, 1)
-    .applyMatrix4(new THREE.Matrix4().makeTranslation(0, 0, -0.5))
-    .applyMatrix4(new THREE.Matrix4().makeScale(1, 1, swordBackOffset + swordLength))
 
   const _makeDecalMesh = () => {
     const geometry = new THREE.BufferGeometry();
@@ -155,6 +150,7 @@ export default () => {
           if (hitPoint.distanceTo(line.start) <= line.distance()) {
             /* // debug meshes
             // {
+              const boxGeometry3 = new THREE.BoxBufferGeometry(0.01, 0.01, 0.01);
               const hitMesh = new THREE.Mesh(boxGeometry3, new THREE.MeshBasicMaterial({color: i === 0 ? 0x00FF00 : 0x808080}));
               hitMesh.position.copy(hitPoint);
               hitMesh.updateMatrixWorld();
@@ -253,6 +249,10 @@ export default () => {
             hitMesh.quaternion.copy(currentSwordTransform.quaternion);
             hitMesh.updateMatrixWorld();
             scene.add(hitMesh);
+
+            const box2Geometry = new THREE.BoxBufferGeometry(0.005, 0.005, 1)
+              .applyMatrix4(new THREE.Matrix4().makeTranslation(0, 0, -0.5))
+              .applyMatrix4(new THREE.Matrix4().makeScale(1, 1, swordBackOffset + swordLength));
 
             const hitMesh2 = new THREE.Mesh(
               box2Geometry,
