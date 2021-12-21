@@ -272,13 +272,21 @@ export default () => {
             const localDecalGeometry = planeGeometry.clone();
 
             localDecalGeometry
-              .applyMatrix4(new THREE.Matrix4().makeScale(thickness, 1, width))
+              .applyMatrix4(
+                localMatrix.makeScale(
+                  thickness,
+                  1,
+                  width
+                )
+              )
               .applyMatrix4(rotationMatrix)
-              .applyMatrix4(new THREE.Matrix4().makeTranslation(
-                hitPoint.x,
-                hitPoint.y,
-                hitPoint.z
-              ));
+              .applyMatrix4(
+                localMatrix.makeTranslation(
+                  hitPoint.x,
+                  hitPoint.y,
+                  hitPoint.z
+                )
+              );
             
             const uvs = localDecalGeometry.attributes.uv.array;
             for (let j = 0; j < localDecalGeometry.attributes.uv.count; j++) {
