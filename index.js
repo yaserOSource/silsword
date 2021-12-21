@@ -114,7 +114,7 @@ export default () => {
       };
       const endSwordTransform = _getCurrentSwordTransform(tempSwordTransform);
 
-      // debug meshes
+      /* // debug meshes
       {
         currentTransformMesh.position.copy(
           endSwordTransform.swordPosition
@@ -128,7 +128,7 @@ export default () => {
         backTransformMesh.position.copy(endSwordTransform.shoulderPosition);
         backTransformMesh.quaternion.copy(endSwordTransform.shoulderQuaternion);
         backTransformMesh.updateMatrixWorld();
-      }
+      } */
 
       if (!using) {
         startSwordTransform.copy(endSwordTransform);
