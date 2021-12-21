@@ -71,11 +71,11 @@ export default () => {
   // const m = new THREE.Mesh(planeGeometry, decalMaterial);
   // scene.add(m);
 
-  const boxGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
+  /* const boxGeometry = new THREE.BoxBufferGeometry(0.1, 0.1, 0.1);
   const currentTransformMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: 0xff0000}));
   scene.add(currentTransformMesh);
   const backTransformMesh = new THREE.Mesh(boxGeometry, new THREE.MeshBasicMaterial({color: 0x0000ff}));
-  scene.add(backTransformMesh);
+  scene.add(backTransformMesh); */
 
   const _makeDecalMesh = () => {
     const geometry = new THREE.BufferGeometry();
