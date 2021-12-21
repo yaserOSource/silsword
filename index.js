@@ -8,8 +8,15 @@ const baseUrl = import.meta.url.replace(/(\/)[^\/\\]*$/, '$1');
 const localVector = new THREE.Vector3();
 const localVector2 = new THREE.Vector3();
 const localVector3 = new THREE.Vector3();
+const localVector4 = new THREE.Vector3();
+const localVector5 = new THREE.Vector3();
+const localVector6 = new THREE.Vector3();
+const localVector7 = new THREE.Vector3();
 const localQuaternion = new THREE.Quaternion();
 const localQuaternion2 = new THREE.Quaternion();
+const localQuaternion3 = new THREE.Quaternion();
+const localMatrix = new THREE.Matrix4();
+const localLine = new THREE.Line3();
 
 const _makeSwordTransform = () => {
   return {
@@ -137,7 +144,7 @@ export default () => {
         swordTransform.swordQuaternion.copy(a.swordQuaternion).slerp(b.swordQuaternion, f);
         return swordTransform;
       };
-      const _getNextPoint = (currentSwordTransform) => {
+      const _getNextPoint = currentSwordTransform => {
         const _getLineQuaternion = (line, q) => {
           return q.setFromRotationMatrix(
             new THREE.Matrix4().lookAt(
@@ -148,16 +155,16 @@ export default () => {
           );
         };
 
-        const line = new THREE.Line3(
+        const line = localLine.set(
           currentSwordTransform.shoulderPosition,
           currentSwordTransform.swordPosition.clone()
-            .add(new THREE.Vector3(0, 0, -swordLength).applyQuaternion(currentSwordTransform.swordQuaternion))
+            .add(localVector.set(0, 0, -swordLength).applyQuaternion(currentSwordTransform.swordQuaternion))
         );
-        const lineQuaternion = _getLineQuaternion(line, new THREE.Quaternion());
+        const lineQuaternion = _getLineQuaternion(line, localQuaternion);
         let result = physics.raycast(line.start, lineQuaternion);
 
         if (result) {
-          const hitPoint = new THREE.Vector3().fromArray(result.point);
+          const hitPoint = localVector.fromArray(result.point);
           if (hitPoint.distanceTo(line.start) <= line.distance()) {
             /* // debug meshes
             // {
@@ -173,20 +180,21 @@ export default () => {
               lastHitPoint = null;
             }
 
-            const normal = line.start.clone().sub(line.end)
+            const normal = localVector2.copy(line.start)
+              .sub(line.end)
               .normalize();
-            const hitNormal = new THREE.Vector3().fromArray(result.normal);
+            const hitNormal = localVector3.fromArray(result.normal);
 
-            const normalScaled = normal.clone().multiplyScalar(normalScale);
-            const normalBack = normal.clone().multiplyScalar(swordBackOffset);
-            const hitNormalBack = hitNormal.clone().multiplyScalar(swordBackOffset);
+            const normalScaled = localVector4.copy(normal).multiplyScalar(normalScale);
+            const normalBack = localVector5.copy(normal).multiplyScalar(swordBackOffset);
+            const hitNormalBack = localVector6.copy(hitNormal).multiplyScalar(swordBackOffset);
     
-            const normalUpQuaternion = new THREE.Quaternion().setFromUnitVectors(
-              new THREE.Vector3(0, 0, -1),
+            const normalUpQuaternion = localQuaternion2.setFromUnitVectors(
+              localVector7.set(0, 0, -1),
               normal
             );
-            const normalDownQuaternion = new THREE.Quaternion().setFromUnitVectors(
-              new THREE.Vector3(0, 0, 1),
+            const normalDownQuaternion = localQuaternion3.setFromUnitVectors(
+              localVector7.set(0, 0, 1),
               normal
             );
     
@@ -194,7 +202,7 @@ export default () => {
             let localWidth;
             let initialHit;
             if (lastHitPoint) {
-              rotationMatrix = new THREE.Matrix4().lookAt(
+              rotationMatrix = localMatrix.lookAt(
                 lastHitPoint.hitPoint,
                 hitPoint,
                 hitNormal
@@ -207,14 +215,14 @@ export default () => {
 
             return {
               initialHit,
-              hitPoint,
-              rotationMatrix,
-              normal,
-              normalBack,
-              normalScaled,
-              hitNormalBack,
-              normalUpQuaternion,
-              normalDownQuaternion,
+              hitPoint: hitPoint.clone(),
+              rotationMatrix: localMatrix.clone(),
+              normal: normal.clone(),
+              normalBack: normalBack.clone(),
+              normalScaled: normalScaled.clone(),
+              hitNormalBack: hitNormalBack.clone(),
+              normalUpQuaternion: normalUpQuaternion.clone(),
+              normalDownQuaternion: normalDownQuaternion.clone(),
               width: localWidth,
               thickness,
               forwardLeftPoint: null,
