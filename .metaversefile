@@ -38,6 +38,7 @@
           "swordTopDownSlash",
           "swordTopDownSlashStep"
         ],
+        "behavior": "sword",
         "boneAttachment": "leftHand",
         "trail": [
           [0, 0.2, 0],
