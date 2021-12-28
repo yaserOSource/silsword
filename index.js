@@ -635,16 +635,23 @@ export default () => {
     localPlayer.wear(app);
   });
 
-  // let wearing = false;
+  let wearing = false;
   useWear(e => {
     const {wear} = e;
     if (subApp) {
+      if (!wear) {
+        subApp.position.copy(app.position);
+        subApp.quaternion.copy(app.quaternion);
+        subApp.scale.copy(app.scale);
+        subApp.updateMatrixWorld();
+      }
+
       subApp.dispatchEvent({
         type: 'wearupdate',
         wear,
       });
     }
-    // wearing = !!wear;
+    wearing = !!wear;
   });
 
   let using = false;
@@ -653,6 +660,20 @@ export default () => {
   });
 
   useFrame(() => {
+    if (!wearing) {
+      if (subApp) {
+        subApp.position.copy(app.position);
+        subApp.quaternion.copy(app.quaternion);
+        subApp.updateMatrixWorld();
+      }
+    } else {
+      if (subApp) {
+        app.position.copy(subApp.position);
+        app.quaternion.copy(subApp.quaternion);
+        app.updateMatrixWorld();
+      }
+    }
+
     if (trailMesh && subApp) {
       trailMesh.update(using, subApp.matrixWorld);
     }
