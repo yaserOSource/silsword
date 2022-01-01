@@ -616,9 +616,10 @@ export default () => {
     subApp = metaversefile.createApp({
       name: u2,
     });
-    subApp.position.copy(app.position);
+    /* subApp.position.copy(app.position);
     subApp.quaternion.copy(app.quaternion);
-    subApp.scale.copy(app.scale);
+    subApp.scale.copy(app.scale); */
+    app.add(subApp);
     subApp.updateMatrixWorld();
     subApp.contentId = u2;
     subApp.instanceId = app.instanceId;
@@ -627,7 +628,6 @@ export default () => {
       subApp.setComponent(key, value);
     }
     await subApp.addModule(m);
-    scene.add(subApp);
   })();
 
   useActivate(() => {
@@ -639,17 +639,17 @@ export default () => {
   useWear(e => {
     const {wear} = e;
     if (subApp) {
-      if (!wear) {
+      /* if (!wear) {
         subApp.position.copy(app.position);
         subApp.quaternion.copy(app.quaternion);
         subApp.scale.copy(app.scale);
         subApp.updateMatrixWorld();
-      }
+      } */
 
-      subApp.dispatchEvent({
+      /* subApp.dispatchEvent({
         type: 'wearupdate',
         wear,
-      });
+      }); */
     }
     wearing = !!wear;
   });
@@ -660,7 +660,7 @@ export default () => {
   });
 
   useFrame(() => {
-    if (!wearing) {
+    /* if (!wearing) {
       if (subApp) {
         subApp.position.copy(app.position);
         subApp.quaternion.copy(app.quaternion);
@@ -672,7 +672,7 @@ export default () => {
         app.quaternion.copy(subApp.quaternion);
         app.updateMatrixWorld();
       }
-    }
+    } */
 
     if (trailMesh && subApp) {
       trailMesh.update(using, subApp.matrixWorld);
