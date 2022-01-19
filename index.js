@@ -627,6 +627,7 @@ export default () => {
       subApp.setComponent(key, value);
     }
     await subApp.addModule(m);
+    app.glb = subApp;
   })();
 
   useActivate(() => {
