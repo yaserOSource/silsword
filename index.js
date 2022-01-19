@@ -43,7 +43,7 @@ export default () => {
   const scene = useScene();
   const {renderer, camera, sceneLowPriority} = useInternals();
   const physics = usePhysics();
-
+  debugger;
   const {components} = app;
 
   const swordBackOffset = 0.5;
